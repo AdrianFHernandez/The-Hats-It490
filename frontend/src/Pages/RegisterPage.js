@@ -1,38 +1,45 @@
-import React from "react"
-import { useState } from "react"
+import React, { useState } from "react";
+import hash from "../Functions/hash";
+import salt from "../Functions/salt";
 
-function RegisterPage (){
+function RegisterPage() {
+    const [name, setName] = useState("");
+    const [username, setUsername] = useState("");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [error, setError] = useState(""); 
 
-    const [name, setName] = useState("")
-    const [username, setUsername] = useState("")
-    const [email, setEmail] = useState("")
-    const [password, setPassword] = useState("")
-    const [confirmPassword, setConfirmPassword] = useState("")
+    function handleSubmission(event) {
+        event.preventDefault(); // Prevent form submission
 
-    function handleSubmisson(event){
+        if (password !== confirmPassword) {
+            setError("Passwords do not match. Please recheck."); 
+            return;
+        } else {
+            setError(""); // Clear error if passwords match
+        }
 
-        // Still need to add a few things to registration:
-        // • Password checking with confirmPassword
-        // • Algo for the hashing of passwords
-        // • Storing unique salt in DB
-        // • Storing hashed Password value in DB
+        // Second Step is to check if username and email in the db:
+        // if they are, alert user and tell them to use different username and/or password this makes sure uniquness
 
-        event.preventDefault(); 
+        // Third step is to hash password and generate salt
+        let extra = salt()
+        let hashedPassword = hash(password)
 
-        console.log(name)
-        console.log(username)
-        console.log(email)
-        console.log(password)
-        console.log(confirmPassword)
-    }
+        //Send these through rabbitmq to the db to store this
+        
 
+        //Generate Session
+
+     }
 
     return (
         <div>
             <h1>Welcome to InvestZero!</h1>
             <h2>Please Register</h2>
-            
-            <form onSubmit={handleSubmisson}>
+
+            <form onSubmit={handleSubmission}>
                 <div>
                     <input
                         type="text"
@@ -78,15 +85,13 @@ function RegisterPage (){
                         required
                     />
                 </div>
-                <button type="submit" >Register </button>
 
-                </form>
+                {error && <p style={{ color: "red" }}>{error}</p>}
 
+                <button type="submit">Register</button>
+            </form>
         </div>
-
-    )
-
+    );
 }
 
-
-export default RegisterPage
+export default RegisterPage;
