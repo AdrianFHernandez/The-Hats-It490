@@ -1,10 +1,12 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios"; 
 
 function LoginPage() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
+    const navigate = useNavigate();  //initializes useNavigate
 
     const handleSubmission = async (event) => {
         event.preventDefault();
@@ -19,9 +21,12 @@ function LoginPage() {
                 password: password
             });
 
-            // If response is successful
-            window.alert(response.data);
-
+            if (response.data.success) {
+                window.alert("Login Successful!");
+                navigate("/home/Adrian/git/The-Hats-It490/WebServer/frontend/src/Pages/HomePage"); // Redirect to home page
+            } else {
+                setError("Invalid credentials. Please try again.");
+            }
         } catch (error) {
             console.error("Error during login:", error);
             setError("Error during login. Please try again.");
