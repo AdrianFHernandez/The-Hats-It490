@@ -1,7 +1,7 @@
-import { randomBytes } from 'crypto';
+// import { randomBytes } from 'crypto';
 
-function salt(size = 16) {
-    return randomBytes(size).toString('hex'); 
-}
+// function salt(size = 16) {
+//     return randomBytes(size).toString('hex'); 
+// }
 
-export default salt;
+// export default salt;

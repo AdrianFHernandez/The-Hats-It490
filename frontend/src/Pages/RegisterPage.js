@@ -1,6 +1,5 @@
 import React, { useState } from "react";
-import hash from "../Functions/hash";
-import salt from "../Functions/salt";
+import axios from "axios"
 
 function RegisterPage() {
     const [name, setName] = useState("");
@@ -8,31 +7,57 @@ function RegisterPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
-    const [error, setError] = useState(""); 
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
 
-    function handleSubmission(event) {
+    async function handleSubmission(event) {
         event.preventDefault(); // Prevent form submission
-
+    
+        // Step 1: Validate Passwords Match
         if (password !== confirmPassword) {
-            setError("Passwords do not match. Please recheck."); 
+            setError("Passwords do not match. Please recheck.");
             return;
         } else {
             setError(""); // Clear error if passwords match
         }
+    
+        // Step 2: Prepare user data for PHP backend
+        const userData = { name, username, email, password };
 
-        // Second Step is to check if username and email in the db:
-        // if they are, alert user and tell them to use different username and/or password this makes sure uniquness
+    
+        try {
+            console.log("Sending request to backend...");
+    
+            // Step 3: Send data to PHP backend for RabbitMQ processing
+            const response = await axios.post("http://localhost/backend/register.php", userData);
 
-        // Third step is to hash password and generate salt
-        let extra = salt()
-        let hashedPassword = hash(password)
+    
+            console.log("Response received:", response.data);
+            console.log(response)
+    
+            if (response.status !== 200) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            console.log("eror noooo")
+            const result = await response.data;
+            console.log("Result:", result);
+    
+            // Step 4: Handle response
+            if (result.success) {
+                setSuccess(result.success);
+                setError(""); 
+            } else {
 
-        //Send these through rabbitmq to the db to store this
-        
-
-        //Generate Session
-
-     }
+                setError(result.error);
+                setSuccess(""); 
+            }
+        } catch (err) {
+            console.error("Fetch error:", err);
+            setError("Failed to connect to the server.");
+            setSuccess("");
+        }
+    }
+    
 
     return (
         <div>
@@ -80,13 +105,15 @@ function RegisterPage() {
                     <input
                         type="password"
                         value={confirmPassword}
-                        placeholder="Confirm your Password"
+                        placeholder="Confirm Password"
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         required
                     />
                 </div>
 
+                {/* Show Error & Success Messages */}
                 {error && <p style={{ color: "red" }}>{error}</p>}
+                {success && <p style={{ color: "green" }}>{success}</p>}
 
                 <button type="submit">Register</button>
             </form>
