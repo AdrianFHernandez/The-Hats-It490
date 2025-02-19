@@ -1,8 +1,8 @@
-import { createHash } from 'crypto'; 
+// import { createHash } from 'crypto'; 
 
-function hash(string) {
-  return createHash('sha256').update(string).digest('hex');
-}
+// function hash(string) {
+//   return createHash('sha256').update(string).digest('hex');
+// }
 
 
-export default hash; 
+// export default hash; 
