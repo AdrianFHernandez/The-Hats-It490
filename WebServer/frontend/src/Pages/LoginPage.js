@@ -8,19 +8,22 @@ function LoginPage() {
 
     const handleSubmission = async (event) => {
         event.preventDefault();
-        console.log("Username:", username);
-        console.log("Password:", password);
         
         // Make a POST request to the server 
         try {
             const response = await axios.post("http://www.sample.com/server.php", {
-                type: "login", 
+                type: "register", 
                 username: username,
-                password: password
+                password: password,
+                sessionId: "1234"
             });
+            
+            console.log(response);
+
+            
 
             // If response is successful
-            window.alert(response.data);
+            window.alert(JSON.stringify(response.data));
 
         } catch (error) {
             console.error("Error during login:", error);
