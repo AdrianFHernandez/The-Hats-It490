@@ -12,13 +12,13 @@ function LoginPage() {
         // Make a POST request to the server 
         try {
             const response = await axios.post("http://www.sample.com/server.php", {
-                type: "fjdskf", 
+                type: "register", 
                 username: username,
                 password: password,
                 sessionId: "1234"
             });
             
-            
+            console.log(response);
 
             
 
