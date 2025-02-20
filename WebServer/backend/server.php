@@ -34,7 +34,7 @@ if ($username && $password) {
     $request['username'] = $username;
     $request['password'] = $password;
     $request['sessionId'] = $data['sessionId'] ?? '';
-    $request['message'] = "How are you sir?";
+    $request['message'] = "How are you sr?";
 
 
     $response = $client->send_request($request);
