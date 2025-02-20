@@ -33,7 +33,7 @@ if (!isset($data["name"]) || !isset($data["username"]) || !isset($data["email"])
 
 // Prepare request for RabbitMQ
 $request = [
-    "type" => "jj",
+    "type" => "register",
     "name" => $data["name"],
     "username" => $data["username"],
     "email" => $data["email"],
