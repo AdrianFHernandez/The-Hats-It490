@@ -12,18 +12,21 @@ function LoginPage() {
         // Make a POST request to the server 
         try {
             const response = await axios.post("http://www.sample.com/server.php", {
-                type: "register", 
+                type: "login", 
                 username: username,
                 password: password,
                 sessionId: "1234"
             });
             
-            console.log(response);
+            window.alert(JSON.stringify(response.data));
+            if (response.data.returnCode == "0"){
+                // Login successful
+                // Redirect to the dashboard page
+                window.location.href = "https://www.google.com";
+            }
 
             
 
-            // If response is successful
-            window.alert(JSON.stringify(response.data));
 
         } catch (error) {
             console.error("Error during login:", error);
