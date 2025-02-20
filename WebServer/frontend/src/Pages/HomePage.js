@@ -1,28 +1,21 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
-function HomePage() {
-    const [image, setImage] = useState("");
-    const handleImageChange = (event) =>{
-        const file = event.target.files[0];
-        if (file){
-            const reader = new FileReader();
-            reader.onload = (e) => setImage(e.target.result);
-            reader.readAsDataURL(file);
-        }    
-    }
+
+function HomePage(props) {
+    const [userData, setUserData] = useState(null);
+
+    useEffect(() => {
+        setUserData(props.user)
+      }, []);
+      
+    
 
     return (
         <div className="homepage container">
         <h1>
             Home Page
         </h1>
-        <div className = "profile-pic">
-            <label className ="upload-label" htmlFor="file">
-                <span class="glyphicon glyphicon-camera">+</span>
-            </label>
-            <input id="file" type="file" onChange={handleImageChange} style ={{display:"none"}}/>
-            <img src = {image || "https://example.com/default-profile.jpg"} id="output" alt="Profile" width="200" />
-           </div>
+            {JSON.stringify(userData)}
         </div>
     );
 }
