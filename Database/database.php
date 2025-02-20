@@ -1,74 +1,121 @@
 <?php
-session_start();
+require_once('path.inc');
+require_once('get_host_info.inc');
+require_once('rabbitMQLib.inc');
 
-// Database connection
-$conn = new mysqli("localhost", "root", "", "authenticationdb");
+function dbConnect()
+{
+    $conn = new mysqli("localhost", "testUser", "12345", "authenticationdb");
 
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+    if ($conn->connect_error) {
+        die("Database Connection Failed: " . $conn->connect_error);
+    }
+
+    return $conn;
 }
 
-// Check if form is submitted
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    if (isset($_POST['register'])) {
-        // Registration process
-        $name = $_POST['name'];
-        $email = $_POST['email'];
-        $password = $_POST['password'];
+function doLogin($username, $password)
+{
+    $conn = dbConnect();
 
-        // Check if email already exists
-        $stmt = $conn->prepare("SELECT userID FROM Users WHERE email = ?");
-        $stmt->bind_param("s", $email);
-        $stmt->execute();
-        $stmt->store_result();
+    
+    
+    $stmt = $conn->prepare("SELECT hashedpass FROM Users WHERE username = ?");
+    $stmt->bind_param("s", $username);
+    $stmt->execute();
+    $stmt->store_result();
 
-        if ($stmt->num_rows > 0) {
-            echo "Email already registered!";
-        } else {
-            // Hash password
-            $hashedpass = password_hash($password, PASSWORD_DEFAULT);
+    if ($stmt->num_rows > 0) {
+        $stmt->bind_result($hashedpass);
+        $stmt->fetch();
 
-            // Insert user into database
-            $stmt = $conn->prepare("INSERT INTO Users (name, email, hashedpass) VALUES (?, ?, ?)");
-            $stmt->bind_param("sss", $name, $email, $hashedpass);
-
-            if ($stmt->execute()) {
-                echo "Registration successful! <a href='index.php'>Login here</a>";
-            } else {
-                echo "Error: " . $stmt->error;
-            }
+        if (password_verify($password, $hashedpass)) {
+            $stmt->close();
+            $conn->close();
+            echo "Sucess\n";
+            return ["returnCode" => '0', "message" => "Login successful"];
         }
+    }
 
+    $stmt->close();
+    $conn->close();
+    echo "Inv\n";
+    return ["returnCode" => '1', "message" => "Invalid username or password"];
+}
+
+function doRegister($name, $username, $email, $password)
+{
+    $conn = dbConnect();
+
+    
+    // Check if user exists
+    $stmt = $conn->prepare("SELECT userID FROM Users WHERE username = ? OR email = ?");
+    $stmt->bind_param("ss", $username, $email);
+    $stmt->execute();
+    $stmt->store_result();
+
+    if ($stmt->num_rows > 0) {
+        echo "already";
         $stmt->close();
-    } elseif (isset($_POST['login'])) {
-        // Login process
-        $email = $_POST['email'];
-        $password = $_POST['password'];
+        $conn->close();
+        return ["returnCode" => '1', "message" => "Username or Email already taken"];
+    }
 
-        $stmt = $conn->prepare("SELECT userID, name, hashedpass FROM Users WHERE email = ?");
-        $stmt->bind_param("s", $email);
-        $stmt->execute();
-        $stmt->store_result();
+    // Hash password
+    $hashedpass = password_hash($password, PASSWORD_DEFAULT);
 
-        if ($stmt->num_rows > 0) {
-            $stmt->bind_result($userID, $name, $hashedpass);
-            $stmt->fetch();
+    // Insert user into database
+    $stmt = $conn->prepare("INSERT INTO Users (name, username, email, hashedpass) VALUES (?, ?, ?, ?)");
+    $stmt->bind_param("ssss", $name, $username, $email, $hashedpass);
 
-            if (password_verify($password, $hashedpass)) {
-                $_SESSION['userID'] = $userID;
-                $_SESSION['name'] = $name;
-                header("Location: home.php");
-                exit();
-            } else {
-                echo "Invalid password!";
-            }
-        } else {
-            echo "User not found!";
-        }
-
+    if ($stmt->execute()) {
         $stmt->close();
+        $conn->close();
+        return ["returnCode" => '0', "message" => "Registration successful"];
+    } else {
+        $stmt->close();
+        $conn->close();
+        return ["returnCode" => '2', "message" => "Registration failed"];
     }
 }
 
-$conn->close();
+function requestProcessor($request)
+{
+    echo "Received request" . PHP_EOL;
+    var_dump($request);
+
+    if (!isset($request['type'])) {
+        return ["returnCode" => '3', "message" => "ERROR: unsupported message type"];
+    }
+
+    switch ($request['type']) {
+        case "login":
+            return doLogin($request['username'], $request['password']);
+        case "register":
+            return doRegister($request['name'], $request['username'], $request['email'], $request['password']);
+        default:
+            return ["returnCode" => '3', "message" => "Unsupported message type"];
+    }
+}
+
+// $server = new rabbitMQServer("testRabbitMQ.ini", "testServer");
+
+// echo "testRabbitMQServer BEGIN" . PHP_EOL;
+// $server->process_requests('requestProcessor');
+// echo "testRabbitMQServer END" . PHP_EOL;
+
+echo "running register";
+
+// doRegister("TOm", "username", "email@gmail.com", "password");
+doLogin("username", "password");
+doLogin("kjsdfkjd", "sdfjksdjf");
+echo "Finished resistering";
+
+
+
+
+exit();
+
 ?>
+
+
