@@ -11,7 +11,7 @@ function LoginPage() {
         
         // Make a POST request to the server 
         try {
-            const response = await axios.post("http://www.sample.com/server.php", {
+            const response = await axios.post("http://www.sample.com/backend/webserver_backend.php", {
                 type: "login", 
                 username: username,
                 password: password,
@@ -19,10 +19,12 @@ function LoginPage() {
             });
             
             window.alert(JSON.stringify(response.data));
-            if (response.data.returnCode == "0"){
+            if (response.data.returnCode === "0"){
                 // Login successful
                 // Redirect to the dashboard page
-                window.location.href = "https://www.google.com";
+                const sessionId = "mockSessionID123456789";
+                localStorage.setItem("sessionID", sessionId);
+                window.location.href = "/home";
             }
 
             
