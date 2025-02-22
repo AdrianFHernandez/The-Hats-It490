@@ -1,20 +1,7 @@
 <?php
 
 
-// Set up session parameters for security and persistence
-session_set_cookie_params([
-    'lifetime' => 0, // Session cookie expires when browser is closed
-    'path' => '/',
-    'domain' => 'www.sample.com', // Ensure this matches your frontend
-    'secure' => true, // Use true for HTTPS, false for local testing
-    'httponly' => true, // Prevent JavaScript access to cookies
-    'samesite' => 'None' // Allows cross-origin requests
-]);
 
-// Start session if not already started
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
 
 // CORS Headers
 header('Access-Control-Allow-Origin: http://localhost:3000'); // Update if frontend is deployed
@@ -91,16 +78,22 @@ function handleLogin($data) {
     $response = $client->send_request($request);
 
     if ($response && isset($response['returnCode']) && $response['returnCode'] === '0') {
-        $_SESSION['sessionId'] = session_id();
-        $_SESSION['user'] = [
-            "username" => $username,
-            "email" => $response['user']['email'] ?? ''
-        ];
-
+        $session_id = $response['session']['sessionId'];
+        // set session_id in browser cookie with same site attribute as None
+        setcookie("PHPSESSID", $session_id, [
+            "expires" => 0,
+            "path" => "/",
+            "domain" => "www.sample.com",
+            "secure" => true,
+            "httponly" => true,
+            "samesite" => "None"
+        ]);
+        
         echo json_encode([
             "success" => true,
-            "sessionId" => $_SESSION['sessionId'],
-            "user" => $_SESSION['user']
+             "sessionId" => $session_id,
+             "user" => $response['user'],
+             "message" => $response['message']
         ]);
     } else {
         echo json_encode(["error" => "Invalid username or password"]);
@@ -109,26 +102,50 @@ function handleLogin($data) {
 
 // Function to validate session
 function handleValidateSession() {
-    if (!isset($_SESSION['sessionId']) || empty($_SESSION['user'])) {
-        echo json_encode(["valid" => false, "error" => "Session not found"]);
+    if (!isset($_COOKIE['PHPSESSID'])) {
+        echo json_encode(["valid" => false, "error" => "Session cookie not set"]);
         exit();
     }
+    
+    // Send session validation request to RabbitMQ
 
-    echo json_encode([
-        "valid" => true,
-        "user" => $_SESSION['user'],
-        "sessionId" => $_SESSION['sessionId']
-    ]);
+    $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
+    $request = ['type' => 'validateSession', 'sessionId' => $_COOKIE['PHPSESSID']];
+    $response = $client->send_request($request);
+    
+    if ($response && isset($response['valid']) && $response['valid']) {
+        echo json_encode([
+            "valid" => true,
+            "user" => $response['user'],
+            "sessionId" => $response['sessionId']
+        ]);
+    } else {
+        echo json_encode(["valid" => false, "error" => "Invalid or expired session"]);
+    }
+
+    
 }
 
 // Function to handle logout
 function handleLogout() {
-    $_SESSION = [];
-    session_destroy();
-    setcookie("PHPSESSID", "", time() - 3600, "/");
+    // Send logout request to RabbitMQ
+    if (!isset($_COOKIE['PHPSESSID'])) {
+        echo json_encode(["success" => true, "message" => "Session cookie not set"]);
+        exit();
+    }
 
-    echo json_encode(["success" => true, "message" => "Logout successful"]);
-    exit();
+    $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
+    $request = ['type' => 'logout', 'sessionId' => $_COOKIE['PHPSESSID']];
+    $response = $client->send_request($request);
+
+    if ($response && isset($response['success']) && $response['success']) {
+        // Clear session cookie
+        setcookie("PHPSESSID", "", time() - 3600, "/");
+        echo json_encode(["success" => true, "message" => $response['message']]);
+    } else {
+        echo json_encode(["error" => "Logout failed"]);
+    }
+    
 }
 
 

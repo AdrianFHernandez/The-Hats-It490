@@ -16,8 +16,8 @@ function LoginPage() {
         { withCredentials: true } // Ensures session cookie is set
       );
 
-      
-      console.log("Login Response:", response.data);
+      console.log(JSON.stringify(response.data));
+      window.alert("Login Response:", JSON.stringify(response.data));
 
       if (response.data.success) {
 
