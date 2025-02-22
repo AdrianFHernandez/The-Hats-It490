@@ -16,6 +16,7 @@ function LoginPage() {
         { withCredentials: true } // Ensures session cookie is set
       );
 
+      
       console.log("Login Response:", response.data);
 
       if (response.data.success) {

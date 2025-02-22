@@ -2,11 +2,11 @@ import React, { useState } from "react";
 import axios from "axios"
 
 function RegisterPage(props) {
-    const [name, setName] = useState("");
-    const [username, setUsername] = useState("");
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [confirmPassword, setConfirmPassword] = useState("");
+    const [name, setName] = useState("Hector");
+    const [username, setUsername] = useState("hector03");
+    const [email, setEmail] = useState("hect@gmail.com");
+    const [password, setPassword] = useState("pass");
+    const [confirmPassword, setConfirmPassword] = useState("pass");
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
@@ -26,22 +26,24 @@ function RegisterPage(props) {
 
     
         try {
-            console.log("Sending request to backend...");
-    
+            console.log("Sending request to backend...", userData);
+            
             // Step 3: Send data to PHP backend for RabbitMQ processing
-            const response = await axios.post("https://www.sample.com/backend/webserver_backend.php", userData);
-
+            const response = await axios.post("https://www.sample.com/backend/webserver_backend.php", 
+                userData, { withCredentials: true }
+            );
+            
+            console.log("Response received:", response);
+            const data = await response.data;
     
-            console.log("Response received:", response.data);
-            console.log(response)
-    
+            console.log("Response received:", data);
+           
             if (response.status !== 200) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
-            console.log("eror noooo")
-            const result = await response.data;
-            console.log("Result:", result);
-    
+            
+            const result = response.data;
+            console.log("here")
             // Step 4: Handle response
             if (result.success) {
                 setSuccess(result.success);

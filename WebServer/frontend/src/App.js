@@ -7,7 +7,7 @@ import axios from 'axios';
 import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom"; 
 
 function App() {
-  const [registering, setRegistering] = useState(false);
+  const [registering, setRegistering] = useState(true);
   const [loggedIn, setLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
   const [userInfo, setUserInfo] = useState(null);
