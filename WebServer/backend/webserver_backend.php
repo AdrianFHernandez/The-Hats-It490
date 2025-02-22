@@ -1,8 +1,20 @@
 <?php
 header('Access-Control-Allow-Origin: http://localhost:3000');
+header('Access-Control-Allow-Credentials: true'); // Required for session persistence
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 header('Content-Type: application/json');
+
+//Set up session params
+session_set_cookie_params([
+    'lifetime' => 1800, // Session ends when the browser closes
+    'path' => '/',
+    'domain' => 'www.sample.com', // Ensure this matches your frontend
+    'secure' => true, // IMPORTANT: Set to false because HTTPS is not used
+    'httponly' => true, // Prevent JavaScript from accessing the cookie
+    'samesite' => 'None' // Allows cross-origin requests
+]);
+
 
 // Handle preflight request (CORS)
 if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
@@ -10,20 +22,22 @@ if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
     exit();
 }
 
+
+session_start();
+
 require_once('path.inc');
 require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 
-// Get the raw POST data
 $data = json_decode(file_get_contents("php://input"), true);
 
-// Check if the data was decoded correctly
+
 if (!$data) {
-    echo json_encode(["error" => "No POST message set or invalid JSON"]);
-    exit(0);
+    echo json_encode(["error" => "Invalid request"]);
+    exit();
 }
 
-// Handle tasks based on 'type'
+// Handle API request types
 switch ($data['type']) {
     case 'login':
         handleLogin($data);
@@ -32,16 +46,20 @@ switch ($data['type']) {
         handleRegister($data);
         break;
     case 'validateSession':
-        handleValidateSession($data);
+        handleValidateSession();
+        break;
+    case 'logout':
+        handleLogout();
         break;
     default:
-        echo json_encode(["error" => "Unknown task type"]);
+        echo json_encode(["error" => "Unknown request type"]);
         break;
 }
 
-// Function to handle login task
+// Function to handle login
 function handleLogin($data) {
-    // Validate input for login
+    
+
     $username = $data['username'] ?? '';
     $password = $data['password'] ?? '';
 
@@ -50,82 +68,55 @@ function handleLogin($data) {
         exit();
     }
 
-    // Send the login data to RabbitMQ (adjust the request accordingly)
+    // Send login request to RabbitMQ
     $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
-    $request = [
-        'type' => 'login',
-        'username' => $username,
-        'password' => $password,
-        'sessionId' => $data['sessionId'] ?? ''
-    ];
+    $request = ['type' => 'login', 'username' => $username, 'password' => $password];
 
     $response = $client->send_request($request);
+     
     if ($response) {
-        echo json_encode($response);
+        session_start();
+        // Ensure session ID persists
+        if (!isset($_SESSION['sessionId'])) {
+            $_SESSION['sessionId'] = session_id();
+        }
+
+        $_SESSION['user'] = [
+            "username" => $username,
+            "email" => $response['message']
+        ];
+
+        echo json_encode(["success" => true, "sessionId" => $_SESSION['sessionId'], "user" => $_SESSION['user']]);
     } else {
         echo json_encode(["error" => "Login failed"]);
     }
 }
 
-// Function to handle register task
-function handleRegister($data) {
-    // Validate input for registration
-    $name = $data['name'] ?? '';
-    $username = $data['username'] ?? '';
-    $email = $data['email'] ?? '';
-    $password = $data['password'] ?? '';
+// Function to validate session
+function handleValidateSession() {
+    
 
-    if (!$name || !$username || !$email || !$password) {
-        echo json_encode(["error" => "All fields are required"]);
+    if (!isset($_SESSION['sessionId'])) {
+        echo json_encode(["valid" => false, "error" => "Session not found"]);
         exit();
     }
 
-    // Send the registration data to RabbitMQ
-    $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
-    $request = [
-        'type' => 'register',
-        'name' => $name,
-        'username' => $username,
-        'email' => $email,
-        'password' => $password
-    ];
-
-    $response = $client->send_request($request);
-    if ($response) {
-        echo json_encode($response);
-    } else {
-        echo json_encode(["error" => "Registration failed"]);
-    }
+    echo json_encode([
+        "valid" => true,
+        "user" => $_SESSION['user'],
+        "sessionId" => $_SESSION['sessionId']
+    ]);
 }
 
-// Function to validate session task
-function handleValidateSession($data) {
-    // Validate session ID
-    $sessionId = $data['sessionId'] ?? '';
+// Function to log out and destroy session
+function handleLogout() {
+    
+    $_SESSION = []; // Clear session data
+    session_destroy(); // Destroy session
+    setcookie("PHPSESSID", "", time() - 3600, "/"); // Remove session cookie
 
-    if (!$sessionId) {
-        echo json_encode(["error" => "Session ID is required"]);
-        exit();
-    }
-
-    if ($sessionId == "mockSessionID123456789") {
-        echo json_encode(["valid" => true, "user" => ["username" => "JohnDoe", "email" => "john.doe@example.com"]]);
-    } else {
-        echo json_encode(["valid" => false]);
-    }
-
-    // // Send the session ID to RabbitMQ for validation
-    // $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
-    // $request = [
-    //     'type' => 'validateSession',
-    //     'sessionId' => $sessionId
-    // ];
-
-    // $response = $client->send_request($request);
-    // if ($response) {
-    //     echo json_encode($response);
-    // } else {
-    //     echo json_encode(["error" => "Session validation failed"]);
-    // }
+    echo json_encode(["success" => true]);
+    exit();
 }
 ?>
+

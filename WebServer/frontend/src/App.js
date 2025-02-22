@@ -9,51 +9,58 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-d
 function App() {
   const [registering, setRegistering] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
-  const [loading, setLoading] = useState(true); 
-  const [userInfo, setUserInfo] = useState(null); 
+  const [loading, setLoading] = useState(true);
+  const [userInfo, setUserInfo] = useState(null);
 
   useEffect(() => {
-    // Function to validate the session with the backend on app load
+    let isMounted = true; // Prevents multiple execution
+  
     const validateSession = async () => {
       try {
-        const sessionID = localStorage.getItem("sessionID");
-
-        if (sessionID) {
-          const response = await axios.post("http://www.sample.com/backend/webserver_backend.php", {
-            type: "validateSession",
-            sessionId: sessionID
-          });
-          
+        const response = await axios.post(
+          "https://www.sample.com/backend/webserver_backend.php",
+          { type: "validateSession" },
+          { withCredentials: true }
+        );
+  
+        if (isMounted) {
+          console.log("Session Validation Response:", response.data);
           if (response.data.valid) {
-            setLoggedIn(true); 
+            setLoggedIn(true);
             setUserInfo(response.data.user);
           } else {
-            setLoggedIn(false); 
+            setLoggedIn(false);
           }
-        } else {
-          setLoggedIn(false); 
         }
       } catch (error) {
-        console.error("Error validating session:", error);
-        setLoggedIn(false);
+        console.error("Session validation error:", error);
       } finally {
-        setLoading(false); 
+        if (isMounted) setLoading(false);
       }
     };
-
+  
     validateSession();
+    console.log("running")
+    return () => { isMounted = false }; // Cleanup on component unmount
   }, []);
+  
 
-  const handleLogout = () => {
-    
-    localStorage.removeItem("sessionID");
+  const handleLogout = async () => {
+    try {
+      await axios.post(
+        "https://www.sample.com/backend/webserver_backend.php",
+        { type: "logout" },
+        { withCredentials: true }
+      );
 
-    // Clear userInfo
-    setUserInfo(null);
-    setLoggedIn(false); 
-
-    // Redirect to login page
-    window.location.href = "/"; 
+      setUserInfo(null);
+      setLoggedIn(false);
+     
+      window.alert("You have been logged out.");
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   return (
@@ -63,13 +70,12 @@ function App() {
         <h4>Practice investing for free and learn to grow your wealth!</h4>
 
         {loading ? (
-          <div>Loading...</div> // Show loading state until session validation is complete
+          <div>Loading...</div> 
         ) : (
           <Routes>
-            {/* Login and Registration route */}
             <Route path="/" element={
               loggedIn ? (
-                <Navigate to="/home" replace /> // Redirect to home page if logged in
+                <Navigate to="/home" replace />
               ) : (
                 <>
                   {registering ? <RegisterPage /> : <LoginPage />}
@@ -80,12 +86,11 @@ function App() {
               )
             } />
 
-            {/* Home route */}
             <Route path="/home" element={
               loggedIn ? (
                 <HomePage user={userInfo} handleLogout={handleLogout} />
               ) : (
-                <Navigate to="/" replace /> 
+                <Navigate to="/" replace />
               )
             } />
           </Routes>

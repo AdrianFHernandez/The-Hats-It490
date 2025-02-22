@@ -29,7 +29,7 @@ function RegisterPage(props) {
             console.log("Sending request to backend...");
     
             // Step 3: Send data to PHP backend for RabbitMQ processing
-            const response = await axios.post("http://www.sample.com/backend/webserver_backend.php", userData);
+            const response = await axios.post("https://www.sample.com/backend/webserver_backend.php", userData);
 
     
             console.log("Response received:", response.data);
