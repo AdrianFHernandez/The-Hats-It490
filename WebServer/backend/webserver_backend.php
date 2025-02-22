@@ -108,11 +108,11 @@ function handleValidateSession() {
     }
     
     // Send session validation request to RabbitMQ
-
     $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
     $request = ['type' => 'validateSession', 'sessionId' => $_COOKIE['PHPSESSID']];
     $response = $client->send_request($request);
     
+    // echo json_encode($response);
     if ($response && isset($response['valid']) && $response['valid']) {
         echo json_encode([
             "valid" => true,
@@ -120,7 +120,16 @@ function handleValidateSession() {
             "sessionId" => $response['sessionId']
         ]);
     } else {
-        echo json_encode(["valid" => false, "error" => "Invalid or expired session"]);
+        // Clear session cookie
+        setcookie("PHPSESSID", "", [
+            "expires" => 0,
+            "path" => "/",
+            "domain" => "www.sample.com",
+            "secure" => true,
+            "httponly" => true,
+            "samesite" => "None"
+        ]);
+        echo json_encode(["valid" => false, "error" => "Invalid or expired sesasion"]);
     }
 
     
@@ -140,7 +149,14 @@ function handleLogout() {
 
     if ($response && isset($response['success']) && $response['success']) {
         // Clear session cookie
-        setcookie("PHPSESSID", "", time() - 3600, "/");
+        setcookie("PHPSESSID", "", [
+            "expires" => -1,
+            "path" => "/",
+            "domain" => "www.sample.com",
+            "secure" => true,
+            "httponly" => true,
+            "samesite" => "None"
+        ]);
         echo json_encode(["success" => true, "message" => $response['message']]);
     } else {
         echo json_encode(["error" => "Logout failed"]);

@@ -25,6 +25,7 @@ function requestProcessor($request)
             if ($response["returnCode"] === '0') {
                 $sessionData = createSession($response["user"]["id"]);
                 $response["session"] = $sessionData;
+                clearExpiredSessions();
             }
             return $response;
         case "validateSession":

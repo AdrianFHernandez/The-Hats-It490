@@ -98,6 +98,7 @@ function validateSession($sessionId)
     $stmt->execute();
     $stmt->store_result();
 
+    // If session is valid
     if ($stmt->num_rows > 0) {
         $stmt->bind_result($userId);
         $stmt->fetch();
@@ -113,9 +114,7 @@ function validateSession($sessionId)
 
         return ["valid" => true, "user" => ["username" => $username, "email" => $email, "created_at" => $createdAt], "sessionId" => $sessionId];
     }
-
-    $stmt->close();
-    $conn->close();
+    
     return ["valid" => false, "error" => "Invalid or expired session"];
 }
 
@@ -124,7 +123,7 @@ function createSession($userId)
 {
     $conn = dbConnect();
     $sessionId = bin2hex(random_bytes(32)); // Generate a secure session ID
-    $expiresAt = time() + (10); // 10 seconds expiration
+    $expiresAt = time() + (15); // 15 seconds expiration
 
     $stmt = $conn->prepare("INSERT INTO sessions (session_id, user_id, expires_at) VALUES (?, ?, ?)");
     $stmt->bind_param("sii", $sessionId, $userId, $expiresAt);
@@ -133,9 +132,24 @@ function createSession($userId)
     $stmt->close();
     $conn->close();
 
+
+
     return ["sessionId" => $sessionId, "expiresAt" => $expiresAt];
 }
 
+
+function clearExpiredSessions()
+{
+    $conn = dbConnect();
+    $currentTime = time();
+
+    $stmt = $conn->prepare("DELETE FROM sessions WHERE expires_at < ?");
+    $stmt->bind_param("i", $currentTime);
+    $stmt->execute();
+
+    $stmt->close();
+    $conn->close();
+}
 
 function doLogout($sessionId)
 {
