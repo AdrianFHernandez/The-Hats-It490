@@ -124,7 +124,7 @@ function createSession($userId)
 {
     $conn = dbConnect();
     $sessionId = bin2hex(random_bytes(32)); // Generate a secure session ID
-    $expiresAt = time() + (30 * 60); // 30 minutes expiration
+    $expiresAt = time() + (10); // 10 seconds expiration
 
     $stmt = $conn->prepare("INSERT INTO sessions (session_id, user_id, expires_at) VALUES (?, ?, ?)");
     $stmt->bind_param("sii", $sessionId, $userId, $expiresAt);
