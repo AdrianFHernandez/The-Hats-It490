@@ -13,7 +13,7 @@ function App() {
   const [userInfo, setUserInfo] = useState(null);
 
   useEffect(() => {
-    let isMounted = true; // Prevents multiple execution
+   
   
     const validateSession = async () => {
       try {
@@ -23,7 +23,7 @@ function App() {
           { withCredentials: true }
         );
   
-        if (isMounted) {
+        
           console.log("Session Validation Response:", response.data);
           if (response.data.valid) {
             setLoggedIn(true);
@@ -31,17 +31,17 @@ function App() {
           } else {
             setLoggedIn(false);
           }
-        }
+      
       } catch (error) {
         console.error("Session validation error:", error);
       } finally {
-        if (isMounted) setLoading(false);
+        setLoading(false);
       }
     };
   
     validateSession();
-    console.log("running")
-    return () => { isMounted = false }; // Cleanup on component unmount
+    
+    
   }, []);
   
 
