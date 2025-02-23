@@ -11,9 +11,9 @@ function LoginPage() {
 
     try {
       const response = await axios.post(
-        "https://www.sample.com/backend/webserver_backend.php",
+        "http://www.sample.com/backend/webserver_backend.php",
         { type: "login", username, password },
-        { withCredentials: true } // Ensures session cookie is set
+        { withCredentials: true } // Send cookies
       );
 
       console.log(JSON.stringify(response.data));
