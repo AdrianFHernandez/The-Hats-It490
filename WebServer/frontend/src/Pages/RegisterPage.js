@@ -2,11 +2,11 @@ import React, { useState } from "react";
 import axios from "axios"
 
 function RegisterPage(props) {
-    const [name, setName] = useState("Hector");
-    const [username, setUsername] = useState("hector03");
-    const [email, setEmail] = useState("hect@gmail.com");
-    const [password, setPassword] = useState("pass");
-    const [confirmPassword, setConfirmPassword] = useState("pass");
+    const [name, setName] = useState("");
+    const [username, setUsername] = useState("");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
