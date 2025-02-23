@@ -18,7 +18,7 @@ function App() {
     const validateSession = async () => {
       try {
         const response = await axios.post(
-          "https://www.sample.com/backend/webserver_backend.php",
+          "http://www.sample.com/backend/webserver_backend.php",
           { type: "validateSession" },
           { withCredentials: true }
         );
@@ -48,7 +48,7 @@ function App() {
   const handleLogout = async () => {
     try {
       await axios.post(
-        "https://www.sample.com/backend/webserver_backend.php",
+        "http://www.sample.com/backend/webserver_backend.php",
         { type: "logout" },
         { withCredentials: true }
       );
@@ -64,7 +64,7 @@ function App() {
   };
 
   return (
-    <Router>
+    <Router basename="/">
       <div className="App">
         <h2>InvestZero!</h2>
         <h4>Practice investing for free and learn to grow your wealth!</h4>

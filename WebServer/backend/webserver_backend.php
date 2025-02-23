@@ -80,15 +80,15 @@ function handleLogin($data) {
     if ($response && isset($response['returnCode']) && $response['returnCode'] === '0') {
         $session_id = $response['session']['sessionId'];
         // set session_id in browser cookie with same site attribute as None
+        
         setcookie("PHPSESSID", $session_id, [
             "expires" => 0,
             "path" => "/",
             "domain" => "www.sample.com",
-            "secure" => true,
+            "secure" => false,
             "httponly" => true,
-            "samesite" => "None"
+            "samesite" => "lax"
         ]);
-        
         echo json_encode([
             "success" => true,
              "sessionId" => $session_id,
@@ -122,12 +122,12 @@ function handleValidateSession() {
     } else {
         // Clear session cookie
         setcookie("PHPSESSID", "", [
-            "expires" => 0,
+            "expires" => -1,
             "path" => "/",
             "domain" => "www.sample.com",
-            "secure" => true,
+            "secure" => false,
             "httponly" => true,
-            "samesite" => "None"
+            "samesite" => "lax"
         ]);
         echo json_encode(["valid" => false, "error" => "Invalid or expired sesasion"]);
     }
@@ -149,14 +149,16 @@ function handleLogout() {
 
     if ($response && isset($response['success']) && $response['success']) {
         // Clear session cookie
+        //Test cookie setting over http
         setcookie("PHPSESSID", "", [
             "expires" => -1,
             "path" => "/",
             "domain" => "www.sample.com",
-            "secure" => true,
+            "secure" => false,
             "httponly" => true,
-            "samesite" => "None"
+            "samesite" => "lax"
         ]);
+        
         echo json_encode(["success" => true, "message" => $response['message']]);
     } else {
         echo json_encode(["error" => "Logout failed"]);
