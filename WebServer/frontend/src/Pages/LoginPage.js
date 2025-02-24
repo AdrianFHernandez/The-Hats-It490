@@ -8,19 +8,25 @@ function LoginPage() {
 
     const handleSubmission = async (event) => {
         event.preventDefault();
-        console.log("Username:", username);
-        console.log("Password:", password);
         
         // Make a POST request to the server 
         try {
             const response = await axios.post("http://www.sample.com/server.php", {
                 type: "login", 
                 username: username,
-                password: password
+                password: password,
+                sessionId: "1234"
             });
+            
+            window.alert(JSON.stringify(response.data));
+            if (response.data.returnCode == "0"){
+                // Login successful
+                // Redirect to the dashboard page
+                window.location.href = "https://www.google.com";
+            }
 
-            // If response is successful
-            window.alert(response.data);
+            
+
 
         } catch (error) {
             console.error("Error during login:", error);

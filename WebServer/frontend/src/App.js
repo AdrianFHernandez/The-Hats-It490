@@ -1,5 +1,6 @@
 import React from "react"
 import './App.css';
+<<<<<<< HEAD
 import RegisterPage from './Pages/RegisterPage';
 import LoginPage from './Pages/LoginPage';
 import { useState } from "react";
