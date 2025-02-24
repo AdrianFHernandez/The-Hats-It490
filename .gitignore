@@ -2,8 +2,8 @@
 
 # Global dependencies
 **/node_modules/
-
-
+**/build/
+credentials
 
 # dependencies
 /node_modules
