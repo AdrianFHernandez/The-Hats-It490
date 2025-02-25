@@ -1,6 +1,6 @@
 -- MySQL dump 10.13  Distrib 8.0.41, for Linux (x86_64)
 --
--- Host: localhost    Database: authenticationdb
+-- Host: localhost    Database: investzero
 -- ------------------------------------------------------
 -- Server version	8.0.41-0ubuntu0.24.04.1
 
@@ -16,6 +16,32 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Table structure for table `Sessions`
+--
+
+DROP TABLE IF EXISTS `Sessions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `Sessions` (
+  `session_id` varchar(225) NOT NULL,
+  `user_id` int NOT NULL,
+  `expires_at` bigint NOT NULL,
+  PRIMARY KEY (`session_id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `Sessions_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `Users` (`userID`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `Sessions`
+--
+
+LOCK TABLES `Sessions` WRITE;
+/*!40000 ALTER TABLE `Sessions` DISABLE KEYS */;
+/*!40000 ALTER TABLE `Sessions` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `Users`
 --
 
@@ -25,12 +51,14 @@ DROP TABLE IF EXISTS `Users`;
 CREATE TABLE `Users` (
   `userID` int NOT NULL AUTO_INCREMENT,
   `email` varchar(225) NOT NULL,
-  `name` varchar(225) DEFAULT NULL,
-  `hashedpass` varchar(225) NOT NULL,
-  `username` varchar(225) DEFAULT NULL,
+  `password` varchar(225) NOT NULL,
+  `username` varchar(225) NOT NULL,
+  `created_at` bigint NOT NULL,
+  `name` varchar(225) NOT NULL,
   PRIMARY KEY (`userID`),
-  UNIQUE KEY `email` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  UNIQUE KEY `email` (`email`),
+  UNIQUE KEY `username` (`username`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -39,7 +67,7 @@ CREATE TABLE `Users` (
 
 LOCK TABLES `Users` WRITE;
 /*!40000 ALTER TABLE `Users` DISABLE KEYS */;
-INSERT INTO `Users` VALUES (1,'tds22@gmal','use','13sdklfjsdkfj','user1'),(2,'email@gmail.com','TOm','$2y$10$RubAuntqEiqXz0d/RCkhM.Rex1fT6fQLLwqrVpHBH6fCGXF0JNUym','username');
+INSERT INTO `Users` VALUES (1,'tds22@gmal','13sdklfjsdkfj','user1',1740253875,''),(2,'email@gmail.com','$2y$10$RubAuntqEiqXz0d/RCkhM.Rex1fT6fQLLwqrVpHBH6fCGXF0JNUym','username',1740253875,''),(3,'han@gmail.com','$2y$10$f8dX8cmBf7C.6Ug9Tund8eZUerU2Cw1E7y.9/59uTBMPqy3GOAP1C','hanna',1740523691,'hanna');
 /*!40000 ALTER TABLE `Users` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -52,4 +80,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-02-22 14:01:45
+-- Dump completed on 2025-02-25 17:56:26
