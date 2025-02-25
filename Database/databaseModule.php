@@ -3,10 +3,9 @@ require_once('path.inc');
 require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 
-
 function dbConnect()
 {
-    $conn = new mysqli("localhost", "hats", "it490@123", "InvestZero");
+    $conn = new mysqli("localhost", "testUser", "12345", "investzero");
 
     if ($conn->connect_error) {
         die("Database Connection Failed: " . $conn->connect_error);
@@ -21,7 +20,7 @@ function doRegister($name, $username, $email, $password)
     $conn = dbConnect();
 
     // Check if username or email already exists
-    $stmt = $conn->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
+    $stmt = $conn->prepare("SELECT userID FROM Users WHERE username = ? OR email = ?");
     $stmt->bind_param("ss", $username, $email);
     $stmt->execute();
     $stmt->store_result();
@@ -37,8 +36,8 @@ function doRegister($name, $username, $email, $password)
     $createdAt = time(); // Store epoch timestamp
 
     // Insert user into database
-    $stmt = $conn->prepare("INSERT INTO users (username, email, password, created_at) VALUES (?, ?, ?, ?)");
-    $stmt->bind_param("sssi", $username, $email, $hashedpass, $createdAt);
+    $stmt = $conn->prepare("INSERT INTO Users (username, email, password, created_at, name) VALUES (?, ?, ?, ?, ?)");
+    $stmt->bind_param("sssis", $username, $email, $hashedpass, $createdAt, $name);
 
     if ($stmt->execute()) {
         $stmt->close();
@@ -57,7 +56,7 @@ function doLogin($username, $password)
     $conn = dbConnect();
     
     // Get user from database
-    $stmt = $conn->prepare("SELECT id, password, email, created_at FROM users WHERE username = ?");
+    $stmt = $conn->prepare("SELECT userID, password, email, created_at FROM Users WHERE username = ?");
     $stmt->bind_param("s", $username);
     $stmt->execute();
     $stmt->store_result();
@@ -103,7 +102,7 @@ function validateSession($sessionId)
         $stmt->bind_result($userId);
         $stmt->fetch();
 
-        $stmt = $conn->prepare("SELECT username, email, created_at FROM users WHERE id = ?");
+        $stmt = $conn->prepare("SELECT username, email, created_at FROM Users WHERE userID = ?");
         $stmt->bind_param("i", $userId);
         $stmt->execute();
         $stmt->bind_result($username, $email, $createdAt);
