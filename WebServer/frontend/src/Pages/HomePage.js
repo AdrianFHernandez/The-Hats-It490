@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 
 
-function HomePage(props) {
-    const [userData, setUserData] = useState(null);
+function HomePage() {
+    const [userData, setUserData] = useState("");
 
     useEffect(() => {
         setUserData(props.user)
