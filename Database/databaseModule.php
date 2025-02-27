@@ -91,7 +91,7 @@ function validateSession($sessionId)
 {
     $conn = dbConnect();
     
-    $stmt = $conn->prepare("SELECT user_id FROM sessions WHERE session_id = ? AND expires_at > ?");
+    $stmt = $conn->prepare("SELECT user_id FROM Sessions WHERE session_id = ? AND expires_at > ?");
     $currentTime = time();
     $stmt->bind_param("si", $sessionId, $currentTime);
     $stmt->execute();
@@ -124,7 +124,7 @@ function createSession($userId)
     $sessionId = bin2hex(random_bytes(32)); // Generate a secure session ID
     $expiresAt = time() + (120); // 120 seconds expiration
 
-    $stmt = $conn->prepare("INSERT INTO sessions (session_id, user_id, expires_at) VALUES (?, ?, ?)");
+    $stmt = $conn->prepare("INSERT INTO Sessions (session_id, user_id, expires_at) VALUES (?, ?, ?)");
     $stmt->bind_param("sii", $sessionId, $userId, $expiresAt);
     $stmt->execute();
 
@@ -142,7 +142,7 @@ function clearExpiredSessions()
     $conn = dbConnect();
     $currentTime = time();
 
-    $stmt = $conn->prepare("DELETE FROM sessions WHERE expires_at < ?");
+    $stmt = $conn->prepare("DELETE FROM Sessions WHERE expires_at < ?");
     $stmt->bind_param("i", $currentTime);
     $stmt->execute();
 
@@ -153,7 +153,7 @@ function clearExpiredSessions()
 function doLogout($sessionId)
 {
     $conn = dbConnect();
-    $stmt = $conn->prepare("DELETE FROM sessions WHERE session_id = ?");
+    $stmt = $conn->prepare("DELETE FROM Sessions WHERE session_id = ?");
     $stmt->bind_param("s", $sessionId);
     $stmt->execute();
     
