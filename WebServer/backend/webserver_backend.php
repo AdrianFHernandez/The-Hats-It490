@@ -1,8 +1,4 @@
 <?php
-
-
-
-
 // CORS Headers
 header('Access-Control-Allow-Origin: http://localhost:3000'); // Update if frontend is deployed
 header('Access-Control-Allow-Credentials: true');
@@ -43,7 +39,7 @@ function handleRegister($data) {
     }
 
     // Send registration request to RabbitMQ
-    $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
+    $client = new rabbitMQClient("HatsRabbitMQ.ini", "Server");;
     $request = [
         'type' => 'register',
         'name' => $name,
@@ -72,7 +68,7 @@ function handleLogin($data) {
     }
 
     // Send login request to RabbitMQ
-    $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
+    $client = new rabbitMQClient("HatsRabbitMQ.ini", "Server");;
     $request = ['type' => 'login', 'username' => $username, 'password' => $password];
 
     $response = $client->send_request($request);
@@ -108,7 +104,7 @@ function handleValidateSession() {
     }
     
     // Send session validation request to RabbitMQ
-    $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
+    $client = new rabbitMQClient("HatsRabbitMQ.ini", "Server");;
     $request = ['type' => 'validateSession', 'sessionId' => $_COOKIE['PHPSESSID']];
     $response = $client->send_request($request);
     
@@ -143,7 +139,7 @@ function handleLogout() {
         exit();
     }
 
-    $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
+    $client = new rabbitMQClient("HatsRabbitMQ.ini", "Server");;
     $request = ['type' => 'logout', 'sessionId' => $_COOKIE['PHPSESSID']];
     $response = $client->send_request($request);
 
