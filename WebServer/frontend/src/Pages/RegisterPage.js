@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios"
 
-function RegisterPage() {
+function RegisterPage(props) {
     const [name, setName] = useState("");
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
@@ -22,30 +22,34 @@ function RegisterPage() {
         }
     
         // Step 2: Prepare user data for PHP backend
-        const userData = { name, username, email, password };
+        const userData = { type : "register", name, username, email, password };
 
     
         try {
-            console.log("Sending request to backend...");
-    
+            console.log("Sending request to backend...", userData);
+            
             // Step 3: Send data to PHP backend for RabbitMQ processing
-            const response = await axios.post("http://localhost/backend/register.php", userData);
-
+            const response = await axios.post("http://www.sample.com/backend/webserver_backend.php", 
+                userData, { withCredentials: true }
+            );
+            
+            console.log("Response received:", response);
+            const data = await response.data;
     
-            console.log("Response received:", response.data);
-            console.log(response)
-    
+            console.log("Response received:", data);
+           
             if (response.status !== 200) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
-            console.log("eror noooo")
-            const result = await response.data;
-            console.log("Result:", result);
-    
+            
+            const result = response.data;
+            
             // Step 4: Handle response
             if (result.success) {
                 setSuccess(result.success);
                 setError(""); 
+                // Redirect to login page
+                window.location.href = "/";
             } else {
 
                 setError(result.error);
