@@ -78,7 +78,7 @@ function handleLogin($data) {
     $response = $client->send_request($request);
 
     if ($response && isset($response['returnCode']) && $response['returnCode'] === '0') {
-        $session_id = $response['session']['sessionId'];
+        // $session_id = $response['session']['sessionId'];
         // set session_id in browser cookie with same site attribute as None
         
         setcookie("PHPSESSID", $session_id, [
@@ -166,6 +166,38 @@ function handleLogout() {
     
 }
 
+function handleGetUserInfo(){
+    // Send logout request to RabbitMQ
+    if (!isset($_COOKIE['PHPSESSID'])) {
+        echo json_encode(["success" => true, "message" => "Session cookie not set"]);
+        exit();
+    }
+
+    $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
+    $request = ['type' => 'getUserInfo', 'sessionId' => $_COOKIE['PHPSESSID']];
+    $response = $client->send_request($request);
+
+    // echo json_encode($response);
+    if ($response && isset($response['valid']) && $response['valid']) {
+        echo json_encode([
+            "user" => $response['user'],
+            "sessionId" => $response['sessionId']
+        ]);
+    } else {
+        // Clear session cookie
+        setcookie("PHPSESSID", "", [
+            "expires" => -1,
+            "path" => "/",
+            "domain" => "www.sample.com",
+            "secure" => false,
+            "httponly" => true,
+            "samesite" => "lax"
+        ]);
+        echo json_encode(["valid" => false, "error" => "Invalid or expired sesasion"]);
+    }
+
+}
+
 
 
 // Process API requests
@@ -182,6 +214,9 @@ switch ($data['type']) {
     case 'logout':
         handleLogout();
         break;
+    case 'getUserInfo':
+        break;
+        handleGetUserInfo();
     default:
         echo json_encode(["error" => "Unknown request type"]);
         break;

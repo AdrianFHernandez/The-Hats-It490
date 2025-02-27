@@ -165,6 +165,17 @@ function doLogout($sessionId)
 }
 
 
+function doGetUserInfo($sessionId){
+    $conn = dbConnect();
+    // $stmt = $conn->prepare("WHERE session_id = ?"); finish query
+    // $stmt->bind_param("s", $sessionId);
+    $stmt->execute();
+    
+    $stmt->close();
+    $conn->close();
+
+}
+
 
 
 

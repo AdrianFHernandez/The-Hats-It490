@@ -3,13 +3,14 @@ import './App.css';
 import RegisterPage from './Pages/RegisterPage';
 import LoginPage from './Pages/LoginPage';
 import HomePage from './Pages/HomePage';
+import TransactionsPage from './Pages/TransactionsPage';
 import axios from 'axios';
 import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom"; 
 
 function App() {
   const [registering, setRegistering] = useState(false);
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loggedIn, setLoggedIn] = useState(true); // change to false
+  const [loading, setLoading] = useState(false);  // change to true
   const [userInfo, setUserInfo] = useState(null);
 
   useEffect(() => {
@@ -38,8 +39,10 @@ function App() {
         setLoading(false);
       }
     };
+
+    setUserInfo({"username":"tds22"}) // remove this
   
-    validateSession();
+    //validateSession(); un comment
     
     
   }, []);
@@ -93,6 +96,10 @@ function App() {
                 <Navigate to="/" replace />
               )
             } />
+              <Route path="/transactions" element={
+                loggedIn ? <TransactionsPage user={userInfo} handleLogout={handleLogout} /> : <Navigate to="/" replace />
+              } />
+
           </Routes>
         )}
       </div>
