@@ -19,15 +19,22 @@ function HomePage({ user, handleLogout }) {
       try {
         const response = await axios.post(
           "http://www.sample.com/backend/webserver_backend.php",
-          { type: "getUserInfo"},
+          { type: "getAccountInfo"},
           { withCredentials: true } // Send cookies
         );
+
+        // echo json_encode([
+        //   "userStocks" => $response['user']['userStocks'],
+        //   "userCashBalance" => $response['user']['userBalance']['cashBalance'],
+        //   "userStockBalance" => $response['user']['userBalance']['stockBalance'],
+        //   "userTotalBalance" => $response['user']['userBalance']['totalBalance'],
+        //   "sessionId" => $response['sessionId']
   
         console.log(JSON.stringify(response.data));
   
         if (response.data.success) {
           gettingUserBalance(true)
-          setUserBalance(response.data.balance)
+          setUserBalance(response.data.userTotalBalance)
         } else {
           setError("Unable to get user balance");
         }

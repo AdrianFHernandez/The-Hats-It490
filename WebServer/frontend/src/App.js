@@ -97,7 +97,7 @@ function App() {
               )
             } />
               <Route path="/transactions" element={
-                loggedIn ? <TransactionsPage user={userInfo} handleLogout={handleLogout} /> : <Navigate to="/" replace />
+                true ? <TransactionsPage user={userInfo} handleLogout={handleLogout} /> : <Navigate to="/" replace /> //CHANGE TO loggedIN instead of true
               } />
 
           </Routes>
