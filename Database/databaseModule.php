@@ -163,6 +163,76 @@ function doLogout($sessionId)
     return ["success" => true, "message" => "Logout successful"];
 }
 
+function doGetAccountInfo($sessionId) {
+    $conn = dbConnect();
+
+    // Step 1: Validate session and get userID
+    $stmt = $conn->prepare("SELECT user_id FROM Sessions WHERE session_id = ? AND expires_at > ?");
+    $currentTime = time();
+    $stmt->bind_param("si", $sessionId, $currentTime);
+    $stmt->execute();
+    $stmt->store_result();
+
+    if ($stmt->num_rows === 0) {
+        $stmt->close();
+        $conn->close();
+        return ["valid" => false, "error" => "Invalid session."];
+    }
+
+    $stmt->bind_result($userId);
+    $stmt->fetch();
+    $stmt->close();
+
+    // Step 2: Get user account details
+    $stmt = $conn->prepare("SELECT account_id, buying_power, total_balance FROM Accounts WHERE userID = ?");
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $stmt->bind_result($accountId, $cashBalance, $totalBalance);
+    $stmt->fetch();
+    $stmt->close();
+
+    // Step 3: Fetch user's stock holdings
+    $stmt = $conn->prepare("
+        SELECT p.ticker, s.name, s.stock_description, p.quantity, p.average_price
+        FROM Portfolios p
+        JOIN Stocks s ON p.ticker = s.ticker
+        WHERE p.account_id = ?
+    ");
+    $stmt->bind_param("i", $accountId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $userStocks = [];
+    $stockBalance = 0;
+
+    while ($row = $result->fetch_assoc()) {
+        $ticker = $row['ticker'];
+        $userStocks[$ticker] = [
+            "companyName" => $row['name'],
+            "companyDescription" => $row['stock_description'],
+            "count" => $row['quantity'],
+            "averagePrice" => $row['average_price']
+        ];
+        // Add to stock balance (total value of stocks owned)
+        $stockBalance += $row['quantity'] * $row['average_price'];
+    }
+
+    $stmt->close();
+    $conn->close();
+
+    // Step 4: Return response
+    return [
+        "valid" => true,
+        "user" => [
+            "userStocks" => $userStocks,
+            "userBalance" => [
+                "cashBalance" => $cashBalance,
+                "stockBalance" => $stockBalance,
+                "totalBalance" => $totalBalance
+            ]
+        ]
+    ];
+}
 
 
 
