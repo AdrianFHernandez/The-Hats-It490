@@ -1,23 +1,20 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 
+function HomePage({ user, handleLogout }) {
+  return (
+    <div className="homepage container">
+      <h1>Welcome to your Home Page</h1>
 
-function HomePage() {
-    const [userData, setUserData] = useState("");
-
-    useEffect(() => {
-        setUserData(props.user)
-      }, []);
-      
-    
-
-    return (
-        <div className="homepage container">
-        <h1>
-            Home Page
-        </h1>
-            {JSON.stringify(userData)}
+      {user ? (
+        <div>
+          <h3>Logged in as: {user.username}</h3>
+          <button onClick={handleLogout}>Logout</button>
         </div>
-    );
+      ) : (
+        <h3>No user data available...</h3>
+      )}
+    </div>
+  );
 }
 
 export default HomePage;
