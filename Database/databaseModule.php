@@ -165,15 +165,66 @@ function doLogout($sessionId)
 }
 
 
-function doGetUserInfo($sessionId){
+function doGetAccountInfo($sessionId){
     $conn = dbConnect();
-    // $stmt = $conn->prepare("WHERE session_id = ?"); finish query
-    // $stmt->bind_param("s", $sessionId);
-    $stmt->execute();
+    // write query to get user account information
+    // We should get the following :
+    // * return Stocks that they own 
+    // * return The prices of these stocks 
+    // * return Calculate User account balance 
+
+    // "userStocks" => $response['user']['userStocks'],
+    // // The prices of stocks would inside the userstocks elements
+    // "userBalance" => $response['user']['Balance'],
+    // // precomputer balance would be sent
+
+    // EXPECTING SOMETHING LIKE THIS:
+    // return response = {
+    //     "user" : {
+    //         "userStocks" : {
+    //             "TSLA": {
+    //                "companyName" : "Tesla",
+    //                "companyDescription": "This company does this ...",
+    //                "count" : 2,
+    //                "averagePrice" : 300
+    //             },
+    //             "VOO" : {
+    //                 "count" : 1,
+    //                 "avergaePrice" : 390
+    //             }
+    //         },
+    //         "userBalance": {
+    //             "cashBalance": 10, 
+    //             "stockBalance": 990,
+    //             "totalBalfzance" : 1000
+    //         }
+    //     }
+    // }
     
     $stmt->close();
     $conn->close();
 
+}
+
+function doGetStockInfo(){
+    $conn = dbConnect();
+
+    // Expecting something 
+    // response ={
+    //            data: {APPLE  :{
+                    //     price: 100
+                    //     description:
+                    //     sector
+                    //
+                    // },
+                    // ALOH : {
+                    //     price: 200
+                    //     description
+                    //     sector
+                    // }}
+    //          } 
+    $stmt->close();
+    $conn->close();
 }
 
 
