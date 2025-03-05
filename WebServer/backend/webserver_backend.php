@@ -78,7 +78,7 @@ function handleLogin($data) {
     $response = $client->send_request($request);
 
     if ($response && isset($response['returnCode']) && $response['returnCode'] === '0') {
-        $session_id = $response['session']['sessionId'];
+        // $session_id = $response['session']['sessionId'];
         // set session_id in browser cookie with same site attribute as None
         
         setcookie("PHPSESSID", $session_id, [
@@ -166,6 +166,79 @@ function handleLogout() {
     
 }
 
+function handleGetAccountInfo(){
+    // Send logout request to RabbitMQ
+    if (!isset($_COOKIE['PHPSESSID'])) {
+        echo json_encode(["success" => true, "message" => "Session cookie not set"]);
+        exit();
+    }
+
+    $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
+    $request = ['type' => 'getAccountInfo', 'sessionId' => $_COOKIE['PHPSESSID']];
+    $response = $client->send_request($request);
+
+    // echo json_encode($response);
+    if ($response && isset($response['valid']) && $response['valid']) {
+        echo json_encode([
+            "userStocks" => $response['user']['userStocks'],
+            "userCashBalance" => $response['user']['userBalance']['cashBalance'],
+            "userStockBalance" => $response['user']['userBalance']['stockBalance'],
+            "userTotalBalance" => $response['user']['userBalance']['totalBalance'],
+            "sessionId" => $response['sessionId']
+
+    // EXPECTING SOMETHING LIKE THIS:
+    // return response = {
+    //     "user" : {
+    //         "userStocks" : {
+    //             "TSLA": {
+    //                "companyName" : "Tesla",
+    //                "companyDescription": "This company does this ...",
+    //                "count" : 2,
+    //                "averagePrice" : 300
+    //             },
+    //             "VOO" : {
+    //                 "count" : 1,
+    //                 "avergaePrice" : 390
+    //             }
+    //         },
+    //         "userBalance": {
+    //             "cashBalance": 10, 
+    //             "stockBalance": 990,
+    //             "totalBalance" : 1000
+    //         }
+    //     }
+    // }
+        ]);
+    } else {
+        echo json_encode(["valid" => false, "error" => "Invalid or expired sesasion"]);
+    }
+
+}
+
+function handleGetStockInfo(){
+    // Send logout request to RabbitMQ
+    if (!isset($_COOKIE['PHPSESSID'])) {
+        echo json_encode(["success" => true, "message" => "Session cookie not set"]);
+        exit();
+    }
+
+    $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
+    $request = ['type' => 'getStockInfo', 'sessionId' => $_COOKIE['PHPSESSID']];
+    $response = $client->send_request($request);
+
+
+    // echo json_encode($response);
+    if ($response && isset($response['valid']) && $response['valid']) {
+        echo json_encode([
+            "tickerPrice" => $response["tickerPrice"]
+        ]);
+    }
+    else{
+        echo json_encode(["valid" => false, "error" => "Invalid or expired sesasion"]);
+    }
+
+
+}
 
 
 // Process API requests
@@ -181,6 +254,12 @@ switch ($data['type']) {
         break;
     case 'logout':
         handleLogout();
+        break;
+    case 'getAccountInfo':
+        handleGetAccountInfo();
+        break;
+    case 'getStockInfo' :
+        handleGetStockInfo();
         break;
     default:
         echo json_encode(["error" => "Unknown request type"]);
