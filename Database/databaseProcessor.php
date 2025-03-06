@@ -32,6 +32,10 @@ function requestProcessor($request)
             return validateSession($request['sessionId']);
         case "logout":
             return doLogout($request['sessionId']);
+        case "getAccountInfo":
+            return doGetAccountInfo($request['sessionID']);
+        case "getStockInfo":
+            return doGetStockInfo($request['sessionID']);
         default:
             return ["returnCode" => '3', "message" => "Unsupported message type"];
     }
