@@ -234,6 +234,43 @@ function doGetAccountInfo($sessionId) {
     ];
 }
 
+function doGetStockInfo() {
+    $conn = dbConnect();
+
+    // Query to get stock details with the latest price
+    $query = "
+        SELECT s.ticker, s.name, s.stock_description, s.sector, ph.close 
+        FROM Stocks s
+        JOIN PriceHistory ph ON s.ticker = ph.ticker
+        WHERE ph.timestamp = (
+            SELECT MAX(timestamp) FROM PriceHistory WHERE ticker = s.ticker
+        )
+    ";
+
+    $stmt = $conn->prepare($query);
+    $stmt->execute();
+    $stmt->store_result();
+    $stmt->bind_result($ticker, $name, $description, $sector, $price);
+
+    $stocks = [];
+
+    // Fetching data and structuring response
+    while ($stmt->fetch()) {
+        $stocks[$ticker] = [
+            "companyName" => $name,
+            "description" => $description,
+            "sector" => $sector,
+            "price" => $price
+        ];
+    }
+
+    $stmt->close();
+    $conn->close();
+
+    // Returning structured response
+    return ["data" => $stocks];
+}
+
 
 
 
