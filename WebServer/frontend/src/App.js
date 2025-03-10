@@ -9,8 +9,8 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-d
 
 function App() {
   const [registering, setRegistering] = useState(false);
-  const [loggedIn, setLoggedIn] = useState(true); // change to false
-  const [loading, setLoading] = useState(false);  // change to true
+  const [loggedIn, setLoggedIn] = useState(false); 
+  const [loading, setLoading] = useState(true);  
   const [userInfo, setUserInfo] = useState(null);
 
   useEffect(() => {
@@ -39,10 +39,9 @@ function App() {
         setLoading(false);
       }
     };
-
-    setUserInfo({"username":"tds22"}) // remove this
   
-    //validateSession(); un comment
+  
+    validateSession(); 
     
     
   }, []);
@@ -97,7 +96,7 @@ function App() {
               )
             } />
               <Route path="/transactions" element={
-                true ? <TransactionsPage user={userInfo} handleLogout={handleLogout} /> : <Navigate to="/" replace /> //CHANGE TO loggedIN instead of true
+                loggedIn ? <TransactionsPage user={userInfo} handleLogout={handleLogout} /> : <Navigate to="/" replace /> 
               } />
 
           </Routes>

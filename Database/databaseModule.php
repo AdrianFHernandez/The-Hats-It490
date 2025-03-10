@@ -91,7 +91,7 @@ function validateSession($sessionId)
 {
     $conn = dbConnect();
     
-    $stmt = $conn->prepare("SELECT user_id FROM sessions WHERE session_id = ? AND expires_at > ?");
+    $stmt = $conn->prepare("SELECT user_id FROM Sessions WHERE session_id = ? AND expires_at > ?");
     $currentTime = time();
     $stmt->bind_param("si", $sessionId, $currentTime);
     $stmt->execute();
