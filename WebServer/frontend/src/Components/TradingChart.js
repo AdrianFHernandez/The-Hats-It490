@@ -3,7 +3,7 @@ import { createChart, CrosshairMode, LineStyle, CandlestickSeries } from "lightw
 import Transaction from "./Transaction";
 import Portfolio from "./Portfolio";
 
-function TradingChart({ stockData }) {
+function TradingChart({Ticker}) {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
   const [chartData, setChartData] = useState([]);
@@ -13,8 +13,12 @@ function TradingChart({ stockData }) {
   const [timeframe, setTimeframe] = useState("1m"); // Default timeframe
   const [remainingData, setRemainingData] = useState([]); // Future (delayed) data waiting in the wings
   const [fetchingMoreData, setFetchingMoreData] = useState(false);
-  const [selectedTicker, setSelectedTicker] = useState("TSLA"); // Default ticker
+  const [selectedTicker, setSelectedTicker] = useState(Ticker); // Default ticker
   
+
+
+
+  const stockData={ticker:"TSLA", name: "Tesla" , marketCap: 12912759190.3, description:"Tesla stock (TSLA) is a stock that represents ownership in Tesla, Inc., a company that designs, manufactures, and sells electric vehicles and energy storage systems.", sector:"Consumer Discretionary"}
   // Define your delay in seconds (24 hours = 86400 seconds)
   const delaySeconds = 86400;
 
