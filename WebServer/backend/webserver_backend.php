@@ -74,7 +74,7 @@ function handleLogin($data) {
     $response = $client->send_request($request);
 
     if ($response && isset($response['returnCode']) && $response['returnCode'] === '0') {
-        // $session_id = $response['session']['sessionId'];
+        $session_id = $response['session']['sessionId'];
         // set session_id in browser cookie with same site attribute as None
         
         setcookie("PHPSESSID", $session_id, [

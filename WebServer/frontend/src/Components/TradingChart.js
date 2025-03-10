@@ -265,7 +265,7 @@ function TradingChart({Ticker}) {
         candlestickSeries.update(nextData);
         setChartData(prevData => [...prevData, nextData]);
       }
-    }, 60000); // Check every minute
+    }, 1000); // Check every minute
 
     return () => clearInterval(updateInterval);
   }, [candlestickSeries, remainingData]);

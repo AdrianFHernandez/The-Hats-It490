@@ -23,13 +23,6 @@ function HomePage({ user, handleLogout }) {
           { withCredentials: true } // Send cookies
         );
 
-        // echo json_encode([
-        //   "userStocks" => $response['user']['userStocks'],
-        //   "userCashBalance" => $response['user']['userBalance']['cashBalance'],
-        //   "userStockBalance" => $response['user']['userBalance']['stockBalance'],
-        //   "userTotalBalance" => $response['user']['userBalance']['totalBalance'],
-        //   "sessionId" => $response['sessionId']
-  
         console.log(JSON.stringify(response.data));
   
         if (response.data.success) {
