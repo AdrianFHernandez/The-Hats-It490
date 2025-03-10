@@ -67,6 +67,7 @@ function RegisterPage(props) {
         <div>
             <h1>Welcome to InvestZero!</h1>
             <h2>Please Register</h2>
+            
 
             <form onSubmit={handleSubmission}>
                 <div>
