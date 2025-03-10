@@ -3,10 +3,9 @@ require_once('path.inc');
 require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 
-
 function dbConnect()
 {
-    $conn = new mysqli("localhost", "hats", "it490@123", "InvestZero");
+    $conn = new mysqli("localhost", "testUser", "12345", "investzero");
 
     if ($conn->connect_error) {
         die("Database Connection Failed: " . $conn->connect_error);
@@ -21,7 +20,7 @@ function doRegister($name, $username, $email, $password)
     $conn = dbConnect();
 
     // Check if username or email already exists
-    $stmt = $conn->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
+    $stmt = $conn->prepare("SELECT userID FROM Users WHERE username = ? OR email = ?");
     $stmt->bind_param("ss", $username, $email);
     $stmt->execute();
     $stmt->store_result();
@@ -37,8 +36,8 @@ function doRegister($name, $username, $email, $password)
     $createdAt = time(); // Store epoch timestamp
 
     // Insert user into database
-    $stmt = $conn->prepare("INSERT INTO users (username, email, password, created_at) VALUES (?, ?, ?, ?)");
-    $stmt->bind_param("sssi", $username, $email, $hashedpass, $createdAt);
+    $stmt = $conn->prepare("INSERT INTO Users (username, email, password, created_at, name) VALUES (?, ?, ?, ?, ?)");
+    $stmt->bind_param("sssis", $username, $email, $hashedpass, $createdAt, $name);
 
     if ($stmt->execute()) {
         $stmt->close();
@@ -57,7 +56,7 @@ function doLogin($username, $password)
     $conn = dbConnect();
     
     // Get user from database
-    $stmt = $conn->prepare("SELECT id, password, email, created_at FROM users WHERE username = ?");
+    $stmt = $conn->prepare("SELECT userID, password, email, created_at FROM Users WHERE username = ?");
     $stmt->bind_param("s", $username);
     $stmt->execute();
     $stmt->store_result();
@@ -103,7 +102,7 @@ function validateSession($sessionId)
         $stmt->bind_result($userId);
         $stmt->fetch();
 
-        $stmt = $conn->prepare("SELECT username, email, created_at FROM users WHERE id = ?");
+        $stmt = $conn->prepare("SELECT username, email, created_at FROM Users WHERE userID = ?");
         $stmt->bind_param("i", $userId);
         $stmt->execute();
         $stmt->bind_result($username, $email, $createdAt);
@@ -125,7 +124,7 @@ function createSession($userId)
     $sessionId = bin2hex(random_bytes(32)); // Generate a secure session ID
     $expiresAt = time() + (120); // 120 seconds expiration
 
-    $stmt = $conn->prepare("INSERT INTO sessions (session_id, user_id, expires_at) VALUES (?, ?, ?)");
+    $stmt = $conn->prepare("INSERT INTO Sessions (session_id, user_id, expires_at) VALUES (?, ?, ?)");
     $stmt->bind_param("sii", $sessionId, $userId, $expiresAt);
     $stmt->execute();
 
@@ -143,7 +142,7 @@ function clearExpiredSessions()
     $conn = dbConnect();
     $currentTime = time();
 
-    $stmt = $conn->prepare("DELETE FROM sessions WHERE expires_at < ?");
+    $stmt = $conn->prepare("DELETE FROM Sessions WHERE expires_at < ?");
     $stmt->bind_param("i", $currentTime);
     $stmt->execute();
 
@@ -154,7 +153,7 @@ function clearExpiredSessions()
 function doLogout($sessionId)
 {
     $conn = dbConnect();
-    $stmt = $conn->prepare("DELETE FROM sessions WHERE session_id = ?");
+    $stmt = $conn->prepare("DELETE FROM Sessions WHERE session_id = ?");
     $stmt->bind_param("s", $sessionId);
     $stmt->execute();
     
@@ -164,67 +163,112 @@ function doLogout($sessionId)
     return ["success" => true, "message" => "Logout successful"];
 }
 
-
-function doGetAccountInfo($sessionId){
+function doGetAccountInfo($sessionId) {
     $conn = dbConnect();
-    // write query to get user account information
-    // We should get the following :
-    // * return Stocks that they own 
-    // * return The prices of these stocks 
-    // * return Calculate User account balance 
 
-    // "userStocks" => $response['user']['userStocks'],
-    // // The prices of stocks would inside the userstocks elements
-    // "userBalance" => $response['user']['Balance'],
-    // // precomputer balance would be sent
+    // Step 1: Validate session and get userID
+    $stmt = $conn->prepare("SELECT user_id FROM Sessions WHERE session_id = ? AND expires_at > ?");
+    $currentTime = time();
+    $stmt->bind_param("si", $sessionId, $currentTime);
+    $stmt->execute();
+    $stmt->store_result();
 
-    // EXPECTING SOMETHING LIKE THIS:
-    // return response = {
-    //     "user" : {
-    //         "userStocks" : {
-    //             "TSLA": {
-    //                "companyName" : "Tesla",
-    //                "companyDescription": "This company does this ...",
-    //                "count" : 2,
-    //                "averagePrice" : 300
-    //             },
-    //             "VOO" : {
-    //                 "count" : 1,
-    //                 "avergaePrice" : 390
-    //             }
-    //         },
-    //         "userBalance": {
-    //             "cashBalance": 10, 
-    //             "stockBalance": 990,
-    //             "totalBalfzance" : 1000
-    //         }
-    //     }
-    // }
-    
+    if ($stmt->num_rows === 0) {
+        $stmt->close();
+        $conn->close();
+        return ["valid" => false, "error" => "Invalid session."];
+    }
+
+    $stmt->bind_result($userId);
+    $stmt->fetch();
+    $stmt->close();
+
+    // Step 2: Get user account details
+    $stmt = $conn->prepare("SELECT account_id, buying_power, total_balance FROM Accounts WHERE userID = ?");
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $stmt->bind_result($accountId, $cashBalance, $totalBalance);
+    $stmt->fetch();
+    $stmt->close();
+
+    // Step 3: Fetch user's stock holdings
+    $stmt = $conn->prepare("
+        SELECT p.ticker, s.name, s.stock_description, p.quantity, p.average_price
+        FROM Portfolios p
+        JOIN Stocks s ON p.ticker = s.ticker
+        WHERE p.account_id = ?
+    ");
+    $stmt->bind_param("i", $accountId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $userStocks = [];
+    $stockBalance = 0;
+
+    while ($row = $result->fetch_assoc()) {
+        $ticker = $row['ticker'];
+        $userStocks[$ticker] = [
+            "companyName" => $row['name'],
+            "companyDescription" => $row['stock_description'],
+            "count" => $row['quantity'],
+            "averagePrice" => $row['average_price']
+        ];
+        // Add to stock balance (total value of stocks owned)
+        $stockBalance += $row['quantity'] * $row['average_price'];
+    }
+
     $stmt->close();
     $conn->close();
 
+    // Step 4: Return response
+    return [
+        "valid" => true,
+        "user" => [
+            "userStocks" => $userStocks,
+            "userBalance" => [
+                "cashBalance" => $cashBalance,
+                "stockBalance" => $stockBalance,
+                "totalBalance" => $totalBalance
+            ]
+        ]
+    ];
 }
 
-function doGetStockInfo(){
+function doGetStockInfo() {
     $conn = dbConnect();
 
-    // Expecting something 
-    // response ={
-    //            data: {APPLE  :{
-                    //     price: 100
-                    //     description:
-                    //     sector
-                    //
-                    // },
-                    // APPly : {
-                    //     price: 200
-                    //     description
-                    //     sector
-                    // }}
-    //          } 
+    // Query to get stock details with the latest price
+    $query = "
+        SELECT s.ticker, s.name, s.stock_description, s.sector, ph.close 
+        FROM Stocks s
+        JOIN PriceHistory ph ON s.ticker = ph.ticker
+        WHERE ph.timestamp = (
+            SELECT MAX(timestamp) FROM PriceHistory WHERE ticker = s.ticker
+        )
+    ";
+
+    $stmt = $conn->prepare($query);
+    $stmt->execute();
+    $stmt->store_result();
+    $stmt->bind_result($ticker, $name, $description, $sector, $price);
+
+    $stocks = [];
+
+    // Fetching data and structuring response
+    while ($stmt->fetch()) {
+        $stocks[$ticker] = [
+            "companyName" => $name,
+            "description" => $description,
+            "sector" => $sector,
+            "price" => $price
+        ];
+    }
+
     $stmt->close();
     $conn->close();
+
+    // Returning structured response
+    return ["data" => $stocks];
 }
 
 
