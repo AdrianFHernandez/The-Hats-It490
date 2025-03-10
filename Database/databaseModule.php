@@ -217,7 +217,7 @@ function doGetStockInfo(){
                     //     sector
                     //
                     // },
-                    // ALOH : {
+                    // APPly : {
                     //     price: 200
                     //     description
                     //     sector

@@ -1,48 +1,58 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import axios from "axios";
-
 
 function TransactionsPage({ user, handleLogout }) {
     const [ticker, setTicker] = useState("");
     const [error, setError] = useState("");
-    const [tickerPrice, setTickerPrice] = useState(null)
+    const [tickerPrices, setTickerPrices] = useState(null);
+
+    const mockData = {          
+        success: true,
+        data: {
+            APPLE: {
+                price: 100,
+                description: "Sells phones",
+                sector: "Tech"
+            },
+            APPLY: {
+                price: 200,
+                description: "mock",
+                sector: "bimbo"
+            }
+        }
+    };
 
     const getStockInfo = async () => {
-  
         try {
-          const response = await axios.post(
-            "http://www.sample.com/backend/webserver_backend.php",
-            { type: "getStockInfo", ticker : ticker},
-            { withCredentials: true } 
+            // Uncomment and use this API request when needed
+            /*
+            const response = await axios.post(
+                "http://www.sample.com/backend/webserver_backend.php",
+                { type: "getStockInfo", ticker: ticker },
+                { withCredentials: true } 
+            );
+            */
 
-          );
-  
-          // echo json_encode([
-          //   "tickerPrice" => $response["tickerPrice"]
-          //]
-    
-          console.log(JSON.stringify(response.data));
-    
-          if (response.data.success) {
-            setTickerPrice(response.data.tickerPrice)
-          } else {
-            setError("Unable to get ", {ticker}, " price");
-          }
+            const response = mockData; // Using mock data for now
+            console.log("Response:", response);
+
+            if (response.success) {
+                setTickerPrices(response.data);
+            } else {
+                setError(`Unable to get ${ticker} price`);
+            }
         } catch (error) {
-          console.error("Error connecting to server:", error);
-          setError(error);
+            console.error("Error connecting to server:", error);
+            setError("Failed to fetch stock data.");
         }
+    };
 
-    }
     const handleSubmit = (e) => {
         e.preventDefault();
         if (ticker.trim()) {
             console.log("Searching for stock:", ticker);
+            getStockInfo();
         }
-        
-        getStockInfo()
-
-
     };
 
     return (
@@ -53,11 +63,29 @@ function TransactionsPage({ user, handleLogout }) {
                     type="text"
                     placeholder="Enter stock ticker (e.g., AAPL)"
                     value={ticker}
-                    onChange={(e) => setTimeout(setTicker(e.target.value.toUpperCase()), 5000)} // add search fill in later
+                    onChange={(e) => setTicker(e.target.value.toUpperCase())} 
                     required
                 />
                 <button type="submit">Search</button>
             </form>
+
+            {error && <p style={{ color: "red" }}>{error}</p>}
+
+            {tickerPrices && (
+                <div>
+                    <h2>Stock Information:</h2>
+                    {tickerPrices[ticker] ? (
+                        <div>
+                            <h3>{ticker}</h3>
+                            <p><strong>Price:</strong> ${tickerPrices[ticker].price}</p>
+                            <p><strong>Description:</strong> {tickerPrices[ticker].description}</p>
+                            <p><strong>Sector:</strong> {tickerPrices[ticker].sector}</p>
+                        </div>
+                    ) : (
+                        <p>No data found for "{ticker}". Try another ticker.</p>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
