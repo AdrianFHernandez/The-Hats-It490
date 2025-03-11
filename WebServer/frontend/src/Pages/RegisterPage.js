@@ -10,6 +10,9 @@ function RegisterPage(props) {
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d.*\d)(?=.*[\W_]).{8,}$/;
+
+
     async function handleSubmission(event) {
         event.preventDefault(); // Prevent form submission
     
@@ -22,6 +25,12 @@ function RegisterPage(props) {
         }
     
         // Step 2: Prepare user data for PHP backend
+        if (!passwordRegex.test(password)){
+            setError("Password must be at least 8 characters long, contain at least one uppercase, two numbers, and one special character")
+            return;
+        }else{
+            setError("");
+        }
         const userData = { type : "register", name, username, email, password };
 
     
