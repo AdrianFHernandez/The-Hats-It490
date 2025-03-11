@@ -3,6 +3,8 @@ require_once('path.inc');
 require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 
+// 3WE0LDXUCWaW7auFquUZB6UlN6BQ41sn
+
 $api_key = trim(file_get_contents("apiKey"));
 echo "Using API Key: " . substr($api_key, 0, 5) . "...\n"; // Mask API key for security
 
