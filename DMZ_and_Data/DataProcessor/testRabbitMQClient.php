@@ -15,7 +15,7 @@ else
 }
 
 $request = array();
-$request['type'] = "Login";
+$request['type'] = "fetch_stock_data";
 $request['username'] = "steve";
 $request['password'] = "password";
 $request['message'] = $msg;
