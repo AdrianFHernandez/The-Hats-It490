@@ -35,7 +35,7 @@ function requestProcessor($request)
         case "getAccountInfo":
             return doGetAccountInfo($request['sessionID']);
         case "getStockInfo":
-            return doGetStockInfo($request['sessionID']);
+            return doGetStockInfo($request['sessionID'], $request['ticker']);
         default:
             return ["returnCode" => '3', "message" => "Unsupported message type"];
     }

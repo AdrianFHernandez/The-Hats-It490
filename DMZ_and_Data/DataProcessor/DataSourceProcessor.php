@@ -23,9 +23,9 @@ function requestProcessor($request)
 
 $server = new rabbitMQServer("HatsRabbitMQ.ini","Server");
 
-echo "testRabbitMQServer BEGIN".PHP_EOL;
+echo "DataSource Processor BEGIN".PHP_EOL;
 $server->process_requests('requestProcessor');
-echo "testRabbitMQServer END".PHP_EOL;
+echo "DataSource Processor END".PHP_EOL;
 exit();
 ?>
 

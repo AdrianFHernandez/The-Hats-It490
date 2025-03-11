@@ -6,7 +6,7 @@ require_once('rabbitMQLib.inc');
 // 3WE0LDXUCWaW7auFquUZB6UlN6BQ41sn
 
 $api_key = trim(file_get_contents("apiKey"));
-echo "Using API Key: " . substr($api_key, 0, 5) . "...\n"; // Mask API key for security
+echo "Using API Key: " . substr($api_key, 0, 5) . "...\n"; 
 
 function fetch_all_stock_data($ticker, $start, $end) {
     global $api_key;
