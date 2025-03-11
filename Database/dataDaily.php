@@ -1,5 +1,13 @@
 <?php
 
+require_once('path.inc');
+require_once('get_host_info.inc');
+require_once('rabbitMQLib.inc');
+require_once('databaseModule.php');
+
+
+
+
 function updateLocalStockData() {
     $conn = dbConnect();
 
@@ -16,6 +24,7 @@ function updateLocalStockData() {
     $stmt->close();
 
     foreach ($tickers as $ticker) {
+        echo $ticker;
         $query = "SELECT MAX(timestamp) FROM PriceHistory WHERE ticker = ?";
         $stmt = $conn->prepare($query);
         $stmt->bind_param("s", $ticker);
@@ -37,8 +46,8 @@ function updateLocalStockData() {
             "start" => $lastTimestamp,
             "end" => $currentTimestamp
         ];
-
-        $response = sendRabbitMQRequest($request);
+        $client = new rabbitMQClient("HatsDMZRabbitMQ.ini","Server");
+        $response = $client->send_request($request);
 
         if ($response && isset($response['data'])) {
             $insertQuery = "INSERT INTO PriceHistory (ticker, timestamp, open, high, low, close, volume) VALUES (?, ?, ?, ?, ?, ?, ?)";
@@ -59,11 +68,15 @@ function updateLocalStockData() {
 
             $stmt->close();
         }
+        else{
+            print_r($request);
+        }
 
-        sleep(30);
+        // sleep(5);
     }
 
     $conn->close();
 }
 
+updateLocalStockData();
 ?>
