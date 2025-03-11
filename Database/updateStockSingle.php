@@ -31,8 +31,8 @@ $currentTimestamp = time();
 $request = [
     "type" => "fetch_stock_data",
     "ticker" => $ticker,
-    "start" => 1738540800,
-    "end" => 1740960000
+    "start" => 1740787200,
+    "end" => 1741651200
 ];
 
 $client = new rabbitMQClient("HatsDMZRabbitMQ.ini", "Server");
