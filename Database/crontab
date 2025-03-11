@@ -1,5 +1,3 @@
-
-
 * * * * * /usr/bin/php ./updateStocks2.php >> ./cronfile2.log 2>&1
 
 
