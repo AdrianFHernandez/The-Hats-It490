@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React, {useState, useEffect} from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
@@ -61,6 +62,19 @@ function HomePage({ user, handleLogout }) {
           <button onClick={handleLogout}>Logout</button>
 
 
+=======
+import React from "react";
+
+function HomePage({ user, handleLogout }) {
+  return (
+    <div className="homepage container">
+      <h1>Welcome to your Home Page</h1>
+
+      {user ? (
+        <div>
+          <h3>Logged in as: {user.username}</h3>
+          <button onClick={handleLogout}>Logout</button>
+>>>>>>> hanna
         </div>
       ) : (
         <h3>No user data available...</h3>
