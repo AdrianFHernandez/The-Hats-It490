@@ -184,7 +184,7 @@ function doGetAccountInfo($sessionId) {
     $stmt->close();
 
     // Step 2: Get user account details
-    $stmt = $conn->prepare("SELECT account_id, buying_power, total_balance FROM Accounts WHERE userID = ?");
+    $stmt = $conn->prepare("SELECT account_id, buying_power, total_balance FROM Accounts WHERE user_id = ?");
     $stmt->bind_param("i", $userId);
     $stmt->execute();
     $stmt->bind_result($accountId, $cashBalance, $totalBalance);
@@ -261,6 +261,7 @@ function doGetStockInfo($sessionId, $ticker) {
 
     while ($stmt->fetch()) {
         $stocks[$ticker] = [
+            "ticker" => $ticker,
             "companyName" => $name,
             "description" => $description,
             "sector" => $sector
@@ -274,7 +275,7 @@ function doGetStockInfo($sessionId, $ticker) {
         return ["error" => "Stock not found"];
     }
 
-    return ["data" => $stocks];
+    return ["data" => $stocks, "valid" => true];
 }
 
 
