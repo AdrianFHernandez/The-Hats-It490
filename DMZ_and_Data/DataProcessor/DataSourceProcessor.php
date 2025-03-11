@@ -3,14 +3,7 @@
 require_once('path.inc');
 require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
-
-function doLogin($username,$password)
-{
-    // lookup username in databas
-    // check password
-    return true;
-    //return false if not valid
-}
+require_once('data.php');
 
 function requestProcessor($request)
 {
@@ -22,10 +15,8 @@ function requestProcessor($request)
   }
   switch ($request['type'])
   {
-    case "login":
-      return doLogin($request['username'],$request['password']);
-    case "validate_session":
-      return doValidate($request['sessionId']);
+    case "fetch_stock_data":
+      return fetch_all_stock_data($request["ticker"],$request["start"], $request["end"]);
   }
   return array("success" => '200', "returnCode" => '0', 'message'=>"Server received request and processed");
 }
