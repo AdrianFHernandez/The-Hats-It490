@@ -87,6 +87,48 @@ function fetch_all_stock_data($ticker, $start, $end) {
 
 }
 
+function delayed_latest_price($ticker) {
+    global $api_key;
+
+    $url = "https://api.polygon.io/v2/aggs/ticker/$ticker/prev?apiKey=$api_key";
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $response = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+  
+    if ($http_code != 200) {
+        echo "Error fetching latest price: HTTP $http_code - Response: $response\n";
+        return ["returnCode" => '1', "message" => "Failed to fetch latest price"];
+    }
+
+    $data = json_decode($response, true);
+
+    if (isset($data['results']) && is_array($data['results']) && count($data['results']) > 0) {
+        $latest = $data['results'][0];
+        print_r($latest);
+        return [
+            "returnCode" => '0',
+            "message" => "Latest price retrieved",
+            "ticker" => $ticker,
+            "timestamp" => intval($latest['t'] / 1000),
+            "open" => floatval($latest['o']),
+            "high" => floatval($latest['h']),
+            "low" => floatval($latest['l']),
+            "close" => floatval($latest['c']),
+            "volume" => intval($latest['v'])
+        ];
+    } else {
+        return ["returnCode" => '2', "message" => "No price data found for $ticker"];
+    }
+}
+
+
+
+
 // fetch_all_stock_data("TSLA", 1738969811, 1741654317)
 // Example Call (for testing)
 // fetch_all_stock_data('VOO', '2025-01-10', '2025-03-10');

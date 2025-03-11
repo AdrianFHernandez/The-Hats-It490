@@ -271,6 +271,22 @@ function doGetStockInfo($sessionId, $ticker) {
     $stmt->close();
     $conn->close();
 
+    $request = [
+        "type" => "get_latest_price",
+        "ticker" => $ticker,
+    ];
+    
+    $client = new rabbitMQClient("HatsDMZRabbitMQ.ini", "Server");
+    $response = $client->send_request($request);
+
+    if ($response) {
+       
+            $stocks[$ticker]["price"] = $response['close'];
+           
+    
+    }
+
+
     if (empty($stocks)) {
         return ["error" => "Stock not found"];
     }
