@@ -33,9 +33,9 @@ function requestProcessor($request)
         case "logout":
             return doLogout($request['sessionId']);
         case "getAccountInfo":
-            return doGetAccountInfo($request['sessionID']);
+            return doGetAccountInfo($request['sessionId']);
         case "getStockInfo":
-            return doGetStockInfo($request['sessionID']);
+            return doGetStockInfo($request['sessionId'], $request['ticker']);
         default:
             return ["returnCode" => '3', "message" => "Unsupported message type"];
     }

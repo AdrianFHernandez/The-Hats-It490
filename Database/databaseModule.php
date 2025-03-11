@@ -184,7 +184,7 @@ function doGetAccountInfo($sessionId) {
     $stmt->close();
 
     // Step 2: Get user account details
-    $stmt = $conn->prepare("SELECT account_id, buying_power, total_balance FROM Accounts WHERE userID = ?");
+    $stmt = $conn->prepare("SELECT account_id, buying_power, total_balance FROM Accounts WHERE user_id = ?");
     $stmt->bind_param("i", $userId);
     $stmt->execute();
     $stmt->bind_result($accountId, $cashBalance, $totalBalance);
@@ -234,42 +234,66 @@ function doGetAccountInfo($sessionId) {
     ];
 }
 
-function doGetStockInfo() {
+function doGetStockInfo($sessionId, $ticker) {
     $conn = dbConnect();
 
-    // Query to get stock details with the latest price
+    // Validate if the session is active
+    //Task to do 
+
+   
     $query = "
-        SELECT s.ticker, s.name, s.stock_description, s.sector, ph.close 
-        FROM Stocks s
-        JOIN PriceHistory ph ON s.ticker = ph.ticker
-        WHERE ph.timestamp = (
-            SELECT MAX(timestamp) FROM PriceHistory WHERE ticker = s.ticker
-        )
+        SELECT ticker, name, stock_description, sector 
+        FROM Stocks 
+        WHERE ticker = ?
     ";
 
     $stmt = $conn->prepare($query);
+    if (!$stmt) {
+        return ["error" => "Database query preparation failed"];
+    }
+
+    $stmt->bind_param("s", $ticker);
     $stmt->execute();
-    $stmt->store_result();
-    $stmt->bind_result($ticker, $name, $description, $sector, $price);
+    $stmt->bind_result($ticker, $name, $description, $sector);
 
     $stocks = [];
 
-    // Fetching data and structuring response
+
     while ($stmt->fetch()) {
         $stocks[$ticker] = [
+            "ticker" => $ticker,
             "companyName" => $name,
             "description" => $description,
-            "sector" => $sector,
-            "price" => $price
+            "sector" => $sector
         ];
     }
 
     $stmt->close();
     $conn->close();
 
-    // Returning structured response
-    return ["data" => $stocks];
+    $request = [
+        "type" => "get_latest_price",
+        "ticker" => $ticker,
+    ];
+    
+    $client = new rabbitMQClient("HatsDMZRabbitMQ.ini", "Server");
+    $response = $client->send_request($request);
+
+    if ($response) {
+       
+            $stocks[$ticker]["price"] = $response['close'];
+           
+    
+    }
+
+
+    if (empty($stocks)) {
+        return ["error" => "Stock not found"];
+    }
+
+    return ["data" => $stocks, "valid" => true];
 }
+
 
 
 

@@ -17,15 +17,18 @@ function requestProcessor($request)
   {
     case "fetch_stock_data":
       return fetch_all_stock_data($request["ticker"],$request["start"], $request["end"]);
+    case "get_latest_price":
+      return delayed_latest_price($request["ticker"]);
   }
+
   return array("success" => '200', "returnCode" => '0', 'message'=>"Server received request and processed");
 }
 
 $server = new rabbitMQServer("HatsRabbitMQ.ini","Server");
 
-echo "testRabbitMQServer BEGIN".PHP_EOL;
+echo "DataSource Processor BEGIN".PHP_EOL;
 $server->process_requests('requestProcessor');
-echo "testRabbitMQServer END".PHP_EOL;
+echo "DataSource Processor END".PHP_EOL;
 exit();
 ?>
 
