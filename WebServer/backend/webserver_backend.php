@@ -1,11 +1,4 @@
 <?php
-<<<<<<< HEAD
-=======
-
-
-
-
->>>>>>> hanna
 // CORS Headers
 header('Access-Control-Allow-Origin: http://localhost:3000'); // Update if frontend is deployed
 header('Access-Control-Allow-Credentials: true');
@@ -46,11 +39,7 @@ function handleRegister($data) {
     }
 
     // Send registration request to RabbitMQ
-<<<<<<< HEAD
     $client = new rabbitMQClient("HatsRabbitMQ.ini", "Server");;
-=======
-    $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
->>>>>>> hanna
     $request = [
         'type' => 'register',
         'name' => $name,
@@ -79,11 +68,7 @@ function handleLogin($data) {
     }
 
     // Send login request to RabbitMQ
-<<<<<<< HEAD
     $client = new rabbitMQClient("HatsRabbitMQ.ini", "Server");;
-=======
-    $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
->>>>>>> hanna
     $request = ['type' => 'login', 'username' => $username, 'password' => $password];
 
     $response = $client->send_request($request);
@@ -119,11 +104,7 @@ function handleValidateSession() {
     }
     
     // Send session validation request to RabbitMQ
-<<<<<<< HEAD
     $client = new rabbitMQClient("HatsRabbitMQ.ini", "Server");;
-=======
-    $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
->>>>>>> hanna
     $request = ['type' => 'validateSession', 'sessionId' => $_COOKIE['PHPSESSID']];
     $response = $client->send_request($request);
     
@@ -158,11 +139,7 @@ function handleLogout() {
         exit();
     }
 
-<<<<<<< HEAD
     $client = new rabbitMQClient("HatsRabbitMQ.ini", "Server");;
-=======
-    $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
->>>>>>> hanna
     $request = ['type' => 'logout', 'sessionId' => $_COOKIE['PHPSESSID']];
     $response = $client->send_request($request);
 
@@ -185,7 +162,6 @@ function handleLogout() {
     
 }
 
-<<<<<<< HEAD
 function handleGetAccountInfo(){
     // Send logout request to RabbitMQ
     if (!isset($_COOKIE['PHPSESSID'])) {
@@ -259,8 +235,6 @@ function handleGetStockInfo(){
 
 
 }
-=======
->>>>>>> hanna
 
 
 // Process API requests
@@ -277,15 +251,12 @@ switch ($data['type']) {
     case 'logout':
         handleLogout();
         break;
-<<<<<<< HEAD
     case 'getAccountInfo':
         handleGetAccountInfo();
         break;
     case 'getStockInfo' :
         handleGetStockInfo();
         break;
-=======
->>>>>>> hanna
     default:
         echo json_encode(["error" => "Unknown request type"]);
         break;
