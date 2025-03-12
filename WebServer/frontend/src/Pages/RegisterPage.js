@@ -9,11 +9,21 @@ function RegisterPage(props) {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
+    const [visible, setVisible] = useState(false); 
 
-    const passwordRegex = /^(?=.*[A-Z])(?=.*\d.*\d)(?=.*[\W_]).{8,}$/;
+    //const [showPassword, setshowPassword] = useState(false);
 
 
+    
+
+
+   
+
+
+    
     async function handleSubmission(event) {
+        
+
         event.preventDefault(); // Prevent form submission
     
         // Step 1: Validate Passwords Match
@@ -23,14 +33,50 @@ function RegisterPage(props) {
         } else {
             setError(""); // Clear error if passwords match
         }
-    
-        // Step 2: Prepare user data for PHP backend
-        if (!passwordRegex.test(password)){
-            setError("Password must be at least 8 characters long, contain at least one uppercase, two numbers, and one special character")
+
+        const hasLowerCase = /[a-z]/.test(password);
+        const hasUpperCase = /[A-Z]/.test(password);
+        const hasDigit = /\d/.test(password);
+        const hasSpecialChar = /[!@#$%&*]/.test(password);
+        const minLength = password.length >= 8;
+
+       
+        if (!hasUpperCase) {
+            setError("Password must contain at least one uppercase letter");
             return;
-        }else{
-            setError("");
+        } else {
+            setError(""); // Clear error if password is valid
         }
+    
+        if (!hasLowerCase) {
+            setError("Password must contain at least one lowercase letter");
+            return;
+        } else {
+            setError(""); // Clear error if password is valid
+        }
+    
+        if (!hasSpecialChar) {
+            setError("Password must contain at least one special character");
+            return;
+        } else {
+            setError(""); // Clear error if password is valid
+        }
+    
+        if (!hasDigit) {
+            setError("Password must contain at least one number");
+            return;
+        } else {
+            setError(""); // Clear error if password is valid
+        }
+    
+        if (!minLength) {
+            setError("Password must be at least 8 characters long");
+            return;
+        } else {
+            setError(""); // Clear error if password is valid
+        }
+        // Step 2: Prepare user data for PHP backend
+        
         const userData = { type : "register", name, username, email, password };
 
     
@@ -108,23 +154,39 @@ function RegisterPage(props) {
                 </div>
                 <div>
                     <input
-                        type="password"
+                        id="password"
                         value={password}
+                        type = {visible ? "text": "password"}
                         placeholder="Password"
                         onChange={(e) => setPassword(e.target.value)}
                         required
                     />
+                    <div 
+                        className="password container"
+                        onClick={()=>setVisible(!visible)} 
+                        style={{cursor: "pointer"}}
+                        >
+                        {visible ? "Hide" : "Show"} Confirm Password
+                    </div>
                 </div>
                 <div>
                     <input
-                        type="password"
+                        id="password"
                         value={confirmPassword}
+                        type = {visible ? "text": "password"}
                         placeholder="Confirm Password"
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         required
                     />
+                    <div 
+                        className="password container"
+                        onClick={()=>setVisible(!visible)} 
+                        style={{cursor: "pointer"}}
+                        >
+                        {visible ? "Hide" : "Show"} Confirm Password
+                    </div>
                 </div>
-
+               
                 {/* Show Error & Success Messages */}
                 {error && <p style={{ color: "red" }}>{error}</p>}
                 {success && <p style={{ color: "green" }}>{success}</p>}
