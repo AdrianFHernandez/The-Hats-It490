@@ -6,38 +6,19 @@ function TransactionsPage({ user, handleLogout }) {
     const [error, setError] = useState("");
     const [tickerPrices, setTickerPrices] = useState(null);
 
-    const mockData = {          
-        success: true,
-        data: {
-            APPLE: {
-                price: 100,
-                description: "Sells phones",
-                sector: "Tech"
-            },
-            APPLY: {
-                price: 200,
-                description: "mock",
-                sector: "bimbo"
-            }
-        }
-    };
-
     const getStockInfo = async () => {
         try {
-            // Uncomment and use this API request when needed
-            /*
             const response = await axios.post(
                 "http://www.sample.com/backend/webserver_backend.php",
                 { type: "getStockInfo", ticker: ticker },
-                { withCredentials: true } 
+                { withCredentials: true }
             );
-            */
 
-            const response = mockData; // Using mock data for now
             console.log("Response:", response);
 
-            if (response.success) {
-                setTickerPrices(response.data);
+            // Ensure proper response structure
+            if (response.status === 200 && response.data.data) {
+                setTickerPrices(response.data.data);
             } else {
                 setError(`Unable to get ${ticker} price`);
             }
@@ -51,6 +32,7 @@ function TransactionsPage({ user, handleLogout }) {
         e.preventDefault();
         if (ticker.trim()) {
             console.log("Searching for stock:", ticker);
+            setError(""); // Clear previous error
             getStockInfo();
         }
     };
@@ -63,7 +45,7 @@ function TransactionsPage({ user, handleLogout }) {
                     type="text"
                     placeholder="Enter stock ticker (e.g., AAPL)"
                     value={ticker}
-                    onChange={(e) => setTicker(e.target.value.toUpperCase())} 
+                    onChange={(e) => setTicker(e.target.value.toUpperCase())}
                     required
                 />
                 <button type="submit">Search</button>
@@ -71,21 +53,19 @@ function TransactionsPage({ user, handleLogout }) {
 
             {error && <p style={{ color: "red" }}>{error}</p>}
 
-            {tickerPrices && (
+            {tickerPrices && tickerPrices[ticker] ? (
                 <div>
                     <h2>Stock Information:</h2>
-                    {tickerPrices[ticker] ? (
-                        <div>
-                            <h3>{ticker}</h3>
-                            <p><strong>Price:</strong> ${tickerPrices[ticker].price}</p>
-                            <p><strong>Description:</strong> {tickerPrices[ticker].description}</p>
-                            <p><strong>Sector:</strong> {tickerPrices[ticker].sector}</p>
-                        </div>
-                    ) : (
-                        <p>No data found for "{ticker}". Try another ticker.</p>
-                    )}
+                    <h3>{ticker}</h3>
+                    <p><strong>Company Name:</strong> {tickerPrices[ticker].companyName}</p>
+                    <p><strong>Description:</strong> {tickerPrices[ticker].description}</p>
+                    <p><strong>Sector:</strong> {tickerPrices[ticker].sector}</p>
+                    <p><strong>Price: $</strong> {tickerPrices[ticker].price}</p>
+
                 </div>
-            )}
+            ) : tickerPrices && !tickerPrices[ticker] ? (
+                <p>No data found for "{ticker}". Try another ticker.</p>
+            ) : null}
         </div>
     );
 }

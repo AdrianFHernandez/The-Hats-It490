@@ -169,7 +169,7 @@ function handleGetAccountInfo(){
         exit();
     }
 
-    $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
+    $client = new rabbitMQClient("HatsRabbitMQ.ini", "Server");;
     $request = ['type' => 'getAccountInfo', 'sessionId' => $_COOKIE['PHPSESSID']];
     $response = $client->send_request($request);
 
@@ -211,22 +211,23 @@ function handleGetAccountInfo(){
 
 }
 
-function handleGetStockInfo(){
+function handleGetStockInfo($data){
+    $ticker = $data["ticker"];
     // Send logout request to RabbitMQ
     if (!isset($_COOKIE['PHPSESSID'])) {
         echo json_encode(["success" => true, "message" => "Session cookie not set"]);
         exit();
     }
-
-    $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
-    $request = ['type' => 'getStockInfo', 'sessionId' => $_COOKIE['PHPSESSID']];
+     
+    $client = new rabbitMQClient("HatsRabbitMQ.ini", "Server");;
+    $request = ['type' => 'getStockInfo', 'sessionId' => $_COOKIE['PHPSESSID'], 'ticker' => $ticker];
     $response = $client->send_request($request);
 
 
     // echo json_encode($response);
     if ($response && isset($response['valid']) && $response['valid']) {
         echo json_encode([
-            "tickerPrice" => $response["tickerPrice"]
+            "data" => $response["data"]
         ]);
     }
     else{
@@ -255,7 +256,7 @@ switch ($data['type']) {
         handleGetAccountInfo();
         break;
     case 'getStockInfo' :
-        handleGetStockInfo();
+        handleGetStockInfo($data);
         break;
     default:
         echo json_encode(["error" => "Unknown request type"]);
