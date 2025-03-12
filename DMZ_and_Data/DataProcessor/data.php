@@ -77,7 +77,7 @@ function fetch_all_stock_data($ticker, $start, $end) {
             break;
         }
     }
-    // print_r($all_data);
+    print_r($all_data);
     if (!empty($all_data)) {
         return ["returnCode" => '0', "message" => "Stock data found", "data" => $all_data];
     } else {
