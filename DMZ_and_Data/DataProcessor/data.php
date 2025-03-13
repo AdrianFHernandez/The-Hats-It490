@@ -8,6 +8,29 @@ require_once('rabbitMQLib.inc');
 $api_key = trim(file_get_contents("apiKey"));
 echo "Using API Key: " . substr($api_key, 0, 5) . "...\n"; 
 
+function fetchAllTickers() {
+    $url = "https://www.sec.gov/files/company_tickers.json";
+
+    // Fetch JSON data
+    $json = file_get_contents($url);
+
+    // Check if fetching was successful
+    if ($json === false) {
+        return "Error fetching data.";
+    }
+
+    // Decode JSON
+    $data = json_decode($json, true);
+
+    // Check if decoding was successful
+    if ($data === null) {
+        return "Error decoding JSON.";
+    }
+
+    return $data;
+}
+
+
 function fetch_all_stock_data($ticker, $start, $end) {
     global $api_key;
 

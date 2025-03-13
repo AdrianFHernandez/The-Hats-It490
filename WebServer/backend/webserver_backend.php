@@ -222,7 +222,7 @@ function handleGetStockInfo($data){
     $client = new rabbitMQClient("HatsRabbitMQ.ini", "Server");;
     $request = ['type' => 'getStockInfo', 'sessionId' => $_COOKIE['PHPSESSID'], 'ticker' => $ticker];
     $response = $client->send_request($request);
-
+    // $client->close();
 
     // echo json_encode($response);
     if ($response && isset($response['valid']) && $response['valid']) {
