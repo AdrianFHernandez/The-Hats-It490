@@ -58,9 +58,6 @@ function TransactionsPage({ user, handleLogout }) {
                     <h2>Stock Information:</h2>
                     <h3>{ticker}</h3>
                     <p><strong>Company Name:</strong> {tickerPrices[ticker].companyName}</p>
-                    <p><strong>Description:</strong> {tickerPrices[ticker].description}</p>
-                    <p><strong>Sector:</strong> {tickerPrices[ticker].sector}</p>
-                    <p><strong>Price: $</strong> {tickerPrices[ticker].price}</p>
 
                 </div>
             ) : tickerPrices && !tickerPrices[ticker] ? (

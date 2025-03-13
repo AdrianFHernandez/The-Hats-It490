@@ -237,14 +237,10 @@ function doGetAccountInfo($sessionId) {
 function doGetStockInfo($sessionId, $ticker) {
     $conn = dbConnect();
 
-    // Validate if the session is active
-    //Task to do 
-
-   
     $query = "
-        SELECT ticker, name, stock_description, sector 
-        FROM Stocks 
-        WHERE ticker = ?
+        SELECT ticker, name
+        FROM allStockTickers 
+        WHERE ticker LIKE ?
     ";
 
     $stmt = $conn->prepare($query);
@@ -252,40 +248,40 @@ function doGetStockInfo($sessionId, $ticker) {
         return ["error" => "Database query preparation failed"];
     }
 
-    $stmt->bind_param("s", $ticker);
+    // Use '%' wildcard only at the end to match prefixes
+    $searchPattern = $ticker . "%";
+    $stmt->bind_param("s", $searchPattern);
     $stmt->execute();
-    $stmt->bind_result($ticker, $name, $description, $sector);
+    $stmt->bind_result($foundTicker, $name);
 
     $stocks = [];
 
-
     while ($stmt->fetch()) {
-        $stocks[$ticker] = [
-            "ticker" => $ticker,
+        $stocks[$foundTicker] = [
+            "ticker" => $foundTicker,
             "companyName" => $name,
-            "description" => $description,
-            "sector" => $sector
         ];
     }
 
     $stmt->close();
     $conn->close();
-    
-    $request = [
-        "type" => "get_latest_price",
-        "ticker" => $ticker,
-    ];
-    
+
+    /*
     if (!empty($stocks)) {
         $client = new rabbitMQClient("HatsDMZRabbitMQ.ini", "Server");
-        $response = $client->send_request($request);
+        foreach ($stocks as $key => $stock) {
+            $request = [
+                "type" => "get_latest_price",
+                "ticker" => $stock['ticker'],
+            ];
+            $response = $client->send_request($request);
 
-    if ($response) {
-            $stocks[$ticker]["price"] = $response['close'];    
+            if ($response) {
+                $stocks[$key]["price"] = $response['close'];    
+            }
+        }
     }
-    }
-   
-
+    */
 
     if (empty($stocks)) {
         return ["error" => "Stock not found"];
@@ -293,6 +289,7 @@ function doGetStockInfo($sessionId, $ticker) {
 
     return ["data" => $stocks, "valid" => true];
 }
+
 
 
 
