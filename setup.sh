@@ -25,4 +25,4 @@ sudo service apache2 restart
 echo "Project setup complete"
 
 # Open the browser
-open http://www.sample.com
+# open http://www.sample.com
