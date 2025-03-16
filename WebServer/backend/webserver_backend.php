@@ -265,7 +265,7 @@ function handleGetStockInfo($data){
     
     if ($response && $response["status"] === "SUCCESS" && $response["type"] === "GET_STOCK_INFO_RESPONSE") {
         echo json_encode([
-            "data" => $response["data"]
+            $response["payload"]["data"]
         ]);
     }
     else{

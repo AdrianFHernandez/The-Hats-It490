@@ -17,8 +17,8 @@ function TransactionsPage({ user, handleLogout }) {
             console.log("Response:", response);
 
             // Ensure proper response structure
-            if (response.status === 200 && response.data.data) {
-                setTickerPrices(response.data.data);
+            if (response.status === 200 && response.data) {
+                setTickerPrices(response.data);
             } else {
                 setError(`Unable to get ${ticker} price`);
             }

@@ -184,7 +184,7 @@ function createSession($userId)
 {
     $conn = dbConnect();
     $sessionId = bin2hex(random_bytes(32)); // Generate a secure session ID
-    $expiresAt = time() + (120); // 120 seconds expiration
+    $expiresAt = time() + (60 * 5); // 5 minutes expiration
 
     $stmt = $conn->prepare("INSERT INTO Sessions (session_id, user_id, expires_at) VALUES (?, ?, ?)");
     $stmt->bind_param("sii", $sessionId, $userId, $expiresAt);
@@ -228,24 +228,32 @@ function doLogout($sessionId)
 function doGetAccountInfo($sessionId)
 {
     // Step 1: Get user ID from session
-    if ($userId = getUserIDfromSession($sessionId) === null) {
+    if (($userId = getUserIDfromSession($sessionId)) === null) {
         return buildResponse("GET_ACCOUNT_INFO_RESPONSE", "FAILED", ["error" => "Invalid session"]);
     }
 
-
-
     $conn = dbConnect();
+
     // Step 2: Get user account details
     $stmt = $conn->prepare("SELECT account_id, buying_power, total_balance FROM Accounts WHERE user_id = ?");
     $stmt->bind_param("i", $userId);
     $stmt->execute();
+    $stmt->store_result(); // Ensure we can check if data exists
+
+    // Check if account exists
+    if ($stmt->num_rows === 0) {
+        $stmt->close();
+        $conn->close();
+        return buildResponse("GET_ACCOUNT_INFO_RESPONSE", "FAILED", ["error" => "User account not found"]);
+    }
+
     $stmt->bind_result($accountId, $cashBalance, $totalBalance);
     $stmt->fetch();
     $stmt->close();
 
     // Step 3: Fetch user's stock holdings
     $stmt = $conn->prepare("
-        SELECT p.ticker, s.name, s.stock_description, p.quantity, p.average_price
+        SELECT p.ticker, s.name, s.description, p.quantity, p.average_price
         FROM Portfolios p
         JOIN Stocks s ON p.ticker = s.ticker
         WHERE p.account_id = ?
@@ -261,7 +269,7 @@ function doGetAccountInfo($sessionId)
         $ticker = $row['ticker'];
         $userStocks[$ticker] = [
             "companyName" => $row['name'],
-            "companyDescription" => $row['stock_description'],
+            "companyDescription" => $row['description'],
             "count" => $row['quantity'],
             "averagePrice" => $row['average_price']
         ];
@@ -285,6 +293,7 @@ function doGetAccountInfo($sessionId)
     ]);
 }
 
+
 function doGetStockInfo($sessionId, $ticker)
 {
     if (getUserIDfromSession($sessionId) === null) {
@@ -295,13 +304,14 @@ function doGetStockInfo($sessionId, $ticker)
 
     $query = "
         SELECT ticker, name
-        FROM allStockTickers 
+        FROM AllStockTickers 
         WHERE ticker LIKE ?
+        LIMIT 7
     ";
 
     $stmt = $conn->prepare($query);
     if (!$stmt) {
-        return ["error" => "Database query preparation failed"];
+        return buildResponse("GET_STOCK_INFO_RESPONSE", "FAILED", ["error" => "Database error"]);
     }
 
     // Use '%' wildcard only at the end to match prefixes
@@ -338,13 +348,7 @@ function doGetStockInfo($sessionId, $ticker)
         }
     }
     */
-
-    if (empty($stocks)) {
-        return ["error" => "Stock not found"];
-    }
-
-    return buildResponse("GET_STOCK_INFO_RESPONSE", "SUCCESS", ["stocks" => $stocks]);
-
+    return buildResponse("GET_STOCK_INFO_RESPONSE", "SUCCESS", ["data" => $stocks]);
 }
 
 function GetStocksBasedOnRisk($sessionId)
