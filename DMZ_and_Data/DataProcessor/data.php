@@ -4,32 +4,54 @@ require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 
 // 3WE0LDXUCWaW7auFquUZB6UlN6BQ41sn
+function buildResponse($type, $status, $payload = [])
+{
+    return [
+        "type" => $type,
+        "timestamp" => time(),
+        "status" => $status,
+        "payload" => $payload
+    ];
+}
 
 $api_key = trim(file_get_contents("apiKey"));
 echo "Using API Key: " . substr($api_key, 0, 5) . "...\n"; 
 
-function fetchAllTickers() {
+function fetchAllTickers()
+{
     $url = "https://www.sec.gov/files/company_tickers.json";
+    $options = [
+        "http" => [
+            "header" => "User-Agent: MyTradingApp/1.0 (myemail@example.com)\r\n"
+        ]
+    ];
 
-    // Fetch JSON data
-    $json = file_get_contents($url);
+    $context = stream_context_create($options);
+    $response = file_get_contents($url, false, $context);
 
-    // Check if fetching was successful
-    if ($json === false) {
-        return "Error fetching data.";
+    if ($response === false) {
+        return buildResponse("FETCH_ALL_TICKERS_RESPONSE", "FAILED", ["message" => "Error fetching SEC company tickers"]);
     }
 
-    // Decode JSON
-    $data = json_decode($json, true);
+    // Convert JSON to PHP array
+    $data = json_decode($response, true);
 
-    // Check if decoding was successful
-    if ($data === null) {
-        return "Error decoding JSON.";
+    if (!$data) {
+        return buildResponse("FETCH_ALL_TICKERS_RESPONSE", "FAILED", ["message" => "Failed to decode JSON data"]);
     }
 
-    return $data;
+    // Extract only ticker and title
+    $filteredData = [];
+    foreach ($data as $stock) {
+        $filteredData[] = [
+            "ticker" => $stock['ticker'],
+            "name" => $stock['title']
+        ];
+    }
+
+
+    return buildResponse("FETCH_ALL_TICKERS_RESPONSE", "SUCCESS", ["data" => $filteredData, "message" => "Sent tickers to databaseProcessor"]);
 }
-
 
 function fetch_all_stock_data($ticker, $start, $end) {
     global $api_key;
@@ -149,7 +171,12 @@ function delayed_latest_price($ticker) {
     }
 }
 
-
+$count = 1;
+function getStocksBasedOnRisk($risk, $riskFactor) {
+    global $count;
+    $count++;
+    return ["returnCode" => '0', "message" => "Stocks based on risk " . $risk . " " . $riskFactor , "count" => $count];
+}
 
 
 // fetch_all_stock_data("TSLA", 1738969811, 1741654317)

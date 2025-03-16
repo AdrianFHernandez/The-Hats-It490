@@ -77,7 +77,7 @@ function RegisterPage(props) {
         }
         // Step 2: Prepare user data for PHP backend
         
-        const userData = { type : "register", name, username, email, password };
+        const userData = { type : "REGISTER", name, username, email, password };
 
     
         try {

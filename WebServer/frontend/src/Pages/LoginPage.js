@@ -6,13 +6,17 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
+ 
+
+
+
   const handleSubmission = async (event) => {
     event.preventDefault();
 
     try {
       const response = await axios.post(
         "http://www.sample.com/backend/webserver_backend.php",
-        { type: "login", username, password },
+        { type: "LOGIN", username, password },
         { withCredentials: true } // Send cookies
       );
 
@@ -59,6 +63,7 @@ function LoginPage() {
           />
         </div>
         <button type="submit">Login</button>
+    
       </form>
     </div>
   );

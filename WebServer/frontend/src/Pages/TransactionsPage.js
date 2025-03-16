@@ -10,7 +10,7 @@ function TransactionsPage({ user, handleLogout }) {
         try {
             const response = await axios.post(
                 "http://www.sample.com/backend/webserver_backend.php",
-                { type: "getStockInfo", ticker: ticker },
+                { type: "GET_STOCK_INFO", ticker: ticker },
                 { withCredentials: true }
             );
 

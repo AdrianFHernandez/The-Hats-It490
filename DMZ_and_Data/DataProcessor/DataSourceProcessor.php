@@ -19,14 +19,16 @@ function requestProcessor($request)
       return fetch_all_stock_data($request["ticker"],$request["start"], $request["end"]);
     case "get_latest_price":
       return delayed_latest_price($request["ticker"]);
-    case "fetchAllTickers":
+    case "FETCH_ALL_TICKERS":
       return fetchAllTickers();
+    case "getStocksBasedOnRisk":
+      return getStocksBasedOnRisk($request['risk'], $request['riskFactor']);
   }
 
-  return array("success" => '200', "returnCode" => '0', 'message'=>"Server received request and processed");
+  return buildResponse("ERROR", "FAILED", ["message" => "Request type not supported"]);
 }
 
-$server = new rabbitMQServer("HatsRabbitMQ.ini","Server");
+$server = new rabbitMQServer("HatsDMZRabbitMQ.ini","Server");
 
 echo "DataSource Processor BEGIN".PHP_EOL;
 $server->process_requests('requestProcessor');

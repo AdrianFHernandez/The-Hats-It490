@@ -19,7 +19,7 @@ function HomePage({ user, handleLogout }) {
       try {
         const response = await axios.post(
           "http://www.sample.com/backend/webserver_backend.php",
-          { type: "getAccountInfo"},
+          { type: "GET_ACCOUNT_INFO"},
           { withCredentials: true } // Send cookies
         );
 
