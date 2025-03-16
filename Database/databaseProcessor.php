@@ -18,30 +18,33 @@ function requestProcessor($request)
     }
 
     switch ($request['type']) {
-        case "register":
-            return doRegister($request['name'], $request['username'], $request['email'], $request['password']);
-        case "login":
-            $response = doLogin($request['username'], $request['password']);
-            if ($response["returnCode"] === '0') {
-                $sessionData = createSession($response["user"]["id"]);
-                $response["session"] = $sessionData;
+        case "REGISTER":
+            return doRegister($request['payload']['name'], $request['payload']['username'], $request['payload']['email'], $request['payload']['password']);
+        case "LOGIN":
+            $response = doLogin($request['payload']['username'],$request['payload']['password']);
+            if ($response["status"] === "SUCCESS") {
+                $sessionData = createSession($response["payload"]["user"]["id"]);
+                $response["payload"]["session"] = $sessionData;
                 clearExpiredSessions();
             }
             return $response;
-        case "validateSession":
-            return validateSession($request['sessionId']);
-        case "logout":
-            return doLogout($request['sessionId']);
-        case "getAccountInfo":
-            return doGetAccountInfo($request['sessionId']);
-        case "getStockInfo":
-            return doGetStockInfo($request['sessionId'], $request['ticker']);
+        case "VALIDATE_SESSION":
+            return validateSession($request['payload']['sessionId']);
+        case "LOGOUT":
+            return doLogout($request['payload']['sessionId']);
+        case "GET_ACCOUNT_INFO":
+            return doGetAccountInfo($request["payload"]['sessionId']);
+        case "GET_STOCK_INFO":
+            return doGetStockInfo($request["payload"]['sessionId'], $request["payload"]['ticker']);
+        case "GET_STOCKS_BASED_ON_RISK":
+            return GetStocksBasedOnRisk($request["payload"]['sessionId'] );
         default:
-            return ["returnCode" => '3', "message" => "Unsupported message type"];
+            return buildResponse("ERROR", "FAILED", ["message" => "Invalid request type"]);
     }
 }
 
 $server = new rabbitMQServer("HatsRabbitMQ.ini","Server");
+
 
 echo "testRabbitMQServer BEGIN".PHP_EOL;
 $server->process_requests('requestProcessor');

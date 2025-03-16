@@ -1,7 +1,38 @@
 <?php
-require_once('path.inc');
-require_once('get_host_info.inc');
-require_once('rabbitMQLib.inc');
+require_once 'path.inc';
+require_once 'get_host_info.inc';
+require_once 'rabbitMQLib.inc';
+
+$client = null;
+
+function getClientForDMZ()
+{
+    global $client;
+    if ($client === null) {
+        $client = new rabbitMQClient("HatsDMZRabbitMQ.ini", "Server");
+
+    }
+    return $client;
+}
+
+
+function buildRequest($type, $payload = []){
+    return [
+        "type" => $type,
+        "timestamp" => time(),
+        "payload" => $payload
+    ];
+}
+function buildResponse($type, $status, $payload = [])
+{
+    return [
+        "type" => $type,
+        "timestamp" => time(),
+        "status" => $status,
+        "payload" => $payload
+    ];
+}
+
 
 function dbConnect()
 {
@@ -28,7 +59,7 @@ function doRegister($name, $username, $email, $password)
     if ($stmt->num_rows > 0) {
         $stmt->close();
         $conn->close();
-        return ["returnCode" => '1', "message" => "Username or Email already taken"];
+        return buildResponse("REGISTER_RESPONSE", "FAILED", ["message" => "Username or email already exists"]);
     }
 
     // Hash password securely
@@ -40,21 +71,44 @@ function doRegister($name, $username, $email, $password)
     $stmt->bind_param("sssis", $username, $email, $hashedpass, $createdAt, $name);
 
     if ($stmt->execute()) {
+        $user_id = $stmt->insert_id;
         $stmt->close();
-        $conn->close();
-        return ["returnCode" => '0', "message" => "Registration successful"];
+
+        // Creating Trading account for the user automatically
+        $stmt = $conn->prepare("INSERT INTO Accounts (user_id) VALUES (?)");
+        $stmt->bind_param("i", $user_id);
+
+        if ($stmt->execute()) {
+            $account_id = $stmt->insert_id;
+            $stmt->close();
+            $conn->close();
+            return buildResponse("REGISTER_RESPONSE", "SUCCESS", [
+                "message" => "Registration successful! Trading account created.",
+                "user_id" => $user_id,
+                "account_id" => $account_id
+            ]);
+        } else {
+            $stmt->close();
+            $conn->close();
+            return buildResponse("REGISTER_RESPONSE", "FAILED", ["message" => "Trading account creation failed, Registraction Success"]);
+        }
+
     } else {
         $stmt->close();
         $conn->close();
-        return ["returnCode" => '2', "message" => "Registration failed"];
+        return buildResponse("REGISTER_RESPONSE", "FAILED", ["message" => "Registration failed"]);
+
     }
 }
+
+
+
 
 
 function doLogin($username, $password)
 {
     $conn = dbConnect();
-    
+
     // Get user from database
     $stmt = $conn->prepare("SELECT userID, password, email, created_at FROM Users WHERE username = ?");
     $stmt->bind_param("s", $username);
@@ -68,8 +122,8 @@ function doLogin($username, $password)
         if (password_verify($password, $hashedpass)) {
             $stmt->close();
             $conn->close();
-            return [
-                "returnCode" => '0',
+            
+            return buildResponse("LOGIN_RESPONSE", "SUCCESS", [
                 "message" => "Login successful",
                 "user" => [
                     "id" => $id,
@@ -77,20 +131,20 @@ function doLogin($username, $password)
                     "email" => $email,
                     "created_at" => $createdAt
                 ]
-            ];
+            ]);
         }
     }
 
     $stmt->close();
     $conn->close();
-    return ["returnCode" => '1', "message" => "Invalid username or password"];
+    return buildResponse("LOGIN_RESPONSE", "FAILED", ["message" => "Invalid username or password"]);
 }
 
 
 function validateSession($sessionId)
 {
     $conn = dbConnect();
-    
+
     $stmt = $conn->prepare("SELECT user_id FROM Sessions WHERE session_id = ? AND expires_at > ?");
     $currentTime = time();
     $stmt->bind_param("si", $sessionId, $currentTime);
@@ -111,10 +165,18 @@ function validateSession($sessionId)
         $stmt->close();
         $conn->close();
 
-        return ["valid" => true, "user" => ["username" => $username, "email" => $email, "created_at" => $createdAt], "sessionId" => $sessionId];
+        return buildResponse("VALIDATE_SESSION_RESPONSE", "SUCCESS", [
+            "valid" => true,
+            "user" => [
+                "id" => $userId,
+                "username" => $username,
+                "email" => $email,
+                "created_at" => $createdAt
+            ]
+        ]);
     }
-    
-    return ["valid" => false, "error" => "Invalid or expired session"];
+
+    return buildResponse("VALIDATE_SESSION_RESPONSE", "FAILED", ["valid" => false, "error" => "Invalid session."]);
 }
 
 
@@ -156,33 +218,23 @@ function doLogout($sessionId)
     $stmt = $conn->prepare("DELETE FROM Sessions WHERE session_id = ?");
     $stmt->bind_param("s", $sessionId);
     $stmt->execute();
-    
+
     $stmt->close();
     $conn->close();
 
-    return ["success" => true, "message" => "Logout successful"];
+    return buildResponse("LOGOUT_RESPONSE", "SUCCESS", ["message" => "Logout successful"]);
 }
 
-function doGetAccountInfo($sessionId) {
-    $conn = dbConnect();
-
-    // Step 1: Validate session and get userID
-    $stmt = $conn->prepare("SELECT user_id FROM Sessions WHERE session_id = ? AND expires_at > ?");
-    $currentTime = time();
-    $stmt->bind_param("si", $sessionId, $currentTime);
-    $stmt->execute();
-    $stmt->store_result();
-
-    if ($stmt->num_rows === 0) {
-        $stmt->close();
-        $conn->close();
-        return ["valid" => false, "error" => "Invalid session."];
+function doGetAccountInfo($sessionId)
+{
+    // Step 1: Get user ID from session
+    if ($userId = getUserIDfromSession($sessionId) === null) {
+        return buildResponse("GET_ACCOUNT_INFO_RESPONSE", "FAILED", ["error" => "Invalid session"]);
     }
 
-    $stmt->bind_result($userId);
-    $stmt->fetch();
-    $stmt->close();
 
+
+    $conn = dbConnect();
     // Step 2: Get user account details
     $stmt = $conn->prepare("SELECT account_id, buying_power, total_balance FROM Accounts WHERE user_id = ?");
     $stmt->bind_param("i", $userId);
@@ -221,8 +273,7 @@ function doGetAccountInfo($sessionId) {
     $conn->close();
 
     // Step 4: Return response
-    return [
-        "valid" => true,
+    return buildResponse("GET_ACCOUNT_INFO_RESPONSE", "SUCCESS", [
         "user" => [
             "userStocks" => $userStocks,
             "userBalance" => [
@@ -231,10 +282,15 @@ function doGetAccountInfo($sessionId) {
                 "totalBalance" => $totalBalance
             ]
         ]
-    ];
+    ]);
 }
 
-function doGetStockInfo($sessionId, $ticker) {
+function doGetStockInfo($sessionId, $ticker)
+{
+    if (getUserIDfromSession($sessionId) === null) {
+        return buildResponse("GET_STOCK_INFO_RESPONSE", "FAILED", ["error" => "Invalid session"]);
+    }
+
     $conn = dbConnect();
 
     $query = "
@@ -287,13 +343,41 @@ function doGetStockInfo($sessionId, $ticker) {
         return ["error" => "Stock not found"];
     }
 
-    return ["data" => $stocks, "valid" => true];
+    return buildResponse("GET_STOCK_INFO_RESPONSE", "SUCCESS", ["stocks" => $stocks]);
+
+}
+
+function GetStocksBasedOnRisk($sessionId)
+{
+    if ($userID = getUserIDfromSession($sessionId) === null) {
+        return buildResponse("GET_STOCKS_BASED_ON_RISK_RESPONSE", "FAILED", ["error" => "Invalid session"]);
+    }
+    
+    return buildResponse("GET_STOCKS_BASED_ON_RISK_RESPONSE", "SUCCESS", ["stocks" => ["AAPL", "GOOGL", "AMZN", "TSLA", "MSFT"]]);
 }
 
 
+function getUserIDfromSession(string $sessionId){
+    # Connect to database and check if the session is valid, if it is return userID, else return null;
+    $conn = dbConnect();
+    $stmt = $conn->prepare("SELECT user_id FROM Sessions WHERE session_id = ? AND expires_at > ?");
+    $currentTime = time();
+    $stmt->bind_param("si", $sessionId, $currentTime);
+    $stmt->execute();
+    $stmt->store_result();
 
+    if ($stmt->num_rows === 0) {
+        $stmt->close();
+        $conn->close();
+        return null;
+    }
 
-
+    $stmt->bind_result($userId);
+    $stmt->fetch();
+    $stmt->close();
+    $conn->close();
+    return $userId;
+}
 
 
 

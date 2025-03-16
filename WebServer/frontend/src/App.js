@@ -20,13 +20,14 @@ function App() {
       try {
         const response = await axios.post(
           "http://www.sample.com/backend/webserver_backend.php",
-          { type: "validateSession" },
+          { type: "VALIDATE_SESSION" },
           { withCredentials: true }
         );
   
         
           console.log("Session Validation Response:", response.data);
           if (response.data.valid) {
+            console.log("User is logged in!");
             setLoggedIn(true);
             setUserInfo(response.data.user);
           } else {
@@ -51,7 +52,7 @@ function App() {
     try {
       await axios.post(
         "http://www.sample.com/backend/webserver_backend.php",
-        { type: "logout" },
+        { type: "LOGOUT" },
         { withCredentials: true }
       );
 
