@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { createChart, CrosshairMode, LineStyle, CandlestickSeries } from "lightweight-charts";
 import Transaction from "./Transaction";
 import Portfolio from "./Portfolio";
+import axios from "axios";
 
 function TradingChart({Ticker}) {
   const containerRef = useRef(null);
@@ -21,7 +22,7 @@ function TradingChart({Ticker}) {
     try {
         const response = await axios.post(
             "http://www.sample.com/backend/webserver_backend.php",
-            { type: "PERFORM_TRANSACTION", ticker: ticker, transactionType: transactionType, price: price, quantity: quantity },
+            { type: "PERFORM_TRANSACTION", ticker: selectedTicker, transactionType: transactionType, price: price, quantity: quantity },
             { withCredentials: true }
         );
 
@@ -35,7 +36,7 @@ function TradingChart({Ticker}) {
 
     } catch (error) {
         console.error("Error connecting to server:", error);
-        setError("Transaction failed.");
+      
     }
 };
 

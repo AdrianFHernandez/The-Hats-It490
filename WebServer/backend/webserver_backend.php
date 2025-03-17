@@ -257,9 +257,26 @@ function handlePerformTransaction($data){
     $ticker = $data["ticker"];
     $quantity = $data["quantity"];
     $price = $data["price"];
-    $type = $data["type"];
+    $transactionType = $data["transactionType"];
+    $client = get_client();
+    $request = buildRequest('PERFORM_TRANSACTION', [
+        'sessionId' => $_COOKIE['PHPSESSID'],
+        'ticker' => $ticker,
+        'quantity' => $quantity,
+        'price' => $price,
+        'type' => $transactionType
+    ]);
+    $response = $client->send_request($request);
+    if ($response && $response["status"] === "SUCCESS" && $response["type"] === "PERFORM_TRANSACTION_RESPONSE") {
+        echo json_encode([
+            "success" => true,
+            "message" => $response["payload"]["message"]
+        ]);
+    } else {
+        echo json_encode(["error" => $response["payload"]["message"] ?? "Transaction failed"]);
+    }
 
-    echo json_encode(["success" => true, "message" => "Transaction completed with " . $ticker . " " . $quantity . " " . $price . " " . $type]);
+   
     
 }
 function handleGetStockInfo($data){
