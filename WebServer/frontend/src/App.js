@@ -96,7 +96,7 @@ function App() {
                 <Navigate to="/" replace />
               )
             } />
-              <Route path="/searchallatocks" element={
+              <Route path="/searchallstocks" element={
                 loggedIn ? <SearchAllStocks user={userInfo} handleLogout={handleLogout} /> : <Navigate to="/" replace /> 
               } />
 

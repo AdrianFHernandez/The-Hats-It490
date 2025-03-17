@@ -312,9 +312,9 @@ function handleGetStockInfo($data){
     $response = $client->send_request($request);
     
     if ($response && $response["status"] === "SUCCESS" && $response["type"] === "GET_STOCK_INFO_RESPONSE") {
-        echo json_encode([
+        echo json_encode(
             $response["payload"]["data"]
-        ]);
+        );
     }
     else{
         echo json_encode(["valid" => false, "error" => "Invalid or expired sesasion"]);

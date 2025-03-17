@@ -65,6 +65,7 @@ function SearchAllStocks({ user, handleLogout }) {
 
             if (response.status === 200 && response.data) {
                 setStockData(response.data);
+                console.log(stockData)
             } else {
                 setError("Unable to fetch stock data");
             }
@@ -122,19 +123,19 @@ function SearchAllStocks({ user, handleLogout }) {
                     />
                 ) : (
                     <>
-                        <label>Market Cap Range: {marketCapRange[0]}B - {marketCapRange[1]}B</label>
+                        <label>Market Cap Range: {marketCapRange[0]} - {marketCapRange[1]}</label>
                         <input
                             type="number"
                             min="0.1"
-                            max="5000"
+                            max="50000000000"
                             step="0.1"
                             value={marketCapRange[0]}
                             onChange={(e) => handleMarketCapChange(0, e.target.value)}
                         />
                         <input
                             type="number"
-                            min="0"
-                            max="5000"
+                            min="0.1"
+                            max="50000000000"
                             step="0.1"
                             value={marketCapRange[1]}
                             onChange={(e) => handleMarketCapChange(1, e.target.value)}
@@ -153,10 +154,10 @@ function SearchAllStocks({ user, handleLogout }) {
                     {stockData.map((stock) => (
                         <div key={stock.ticker} style={{ border: "1px solid #ccc", padding: "10px", margin: "10px 0" }}>
                             <h3>{stock.ticker} - {stock.name}</h3>
-                            <p><strong>Market Cap:</strong> ${(stock.marketCap / 1e9).toFixed(2)}B</p>
+                            <p><strong>Market Cap:</strong> ${(stock.marketCap / 1e6).toFixed(2)}M</p>
                             <p><strong>Sector:</strong> {stock.sector}</p>
                             <p><strong>Industry:</strong> {stock.industry}</p>
-                            <p><strong>Price:</strong> ${stock.price.toFixed(2)}</p>
+                            <p><strong>Price:</strong> ${parseFloat(stock.price).toFixed(2)}</p>
                             <p><strong>Exchange:</strong> {stock.exchange}</p>
                         </div>
                     ))}
