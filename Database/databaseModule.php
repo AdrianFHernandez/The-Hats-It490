@@ -305,11 +305,11 @@ function doGetStockInfo($sessionId, $payload)
     $ticker = $payload['ticker'] ?? '';
     $marketCapMin = $payload['marketCapMin'] ?? '';
     $marketCapMax = $payload['marketCapMax'] ?? '';
-    
+
     if ($ticker) {
         $query = "
         SELECT ticker, name, marketCap, sector, industry, price, exchange
-        FROM AllStockTickers 
+        FROM Stocks 
         WHERE ticker LIKE ?
         LIMIT 7
         ";
@@ -328,8 +328,8 @@ function doGetStockInfo($sessionId, $payload)
         
         $query = "
         SELECT ticker, name, marketCap, sector, industry, price, exchange 
-        FROM STOCKS 
-        WHERE marketCap >= ? AND marketCap <= ?
+        FROM Stocks 
+        WHERE marketCap >= ? AND marketCap <= ? LIMIT 7
         ";
         
         $stmt = $conn->prepare($query);
@@ -356,12 +356,14 @@ function doGetStockInfo($sessionId, $payload)
             "exchange" => $exchange
         ];
     }
-
+    
     $stmt->close();
     $conn->close();
 
+   
     return buildResponse("GET_STOCK_INFO_RESPONSE", "SUCCESS", ["data" => $stocks]);
 }
+
 
 function GetStocksBasedOnRisk($sessionId)
 {
