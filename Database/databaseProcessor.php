@@ -14,7 +14,7 @@ function requestProcessor($request)
 
     
     if (!isset($request['type'])) {
-        return ["returnCode" => '3', "message" => "ERROR: unsupported message type"];
+        return buildResponse("ERROR", "FAILED", ["message" => "Invalid request type"]);
     }
 
     switch ($request['type']) {
@@ -38,6 +38,8 @@ function requestProcessor($request)
             return doGetStockInfo($request["payload"]['sessionId'], $request["payload"]['ticker']);
         case "GET_STOCKS_BASED_ON_RISK":
             return GetStocksBasedOnRisk($request["payload"]['sessionId'] );
+        case "PERFORM_TRANSACTION":
+            return performTransaction($request["payload"]['sessionId'], $request["payload"]['ticker'], $request["payload"]['quantity'], $request["payload"]['price'], $request["payload"]['type']);
         default:
             return buildResponse("ERROR", "FAILED", ["message" => "Invalid request type"]);
     }

@@ -15,8 +15,29 @@ function TradingChart({Ticker}) {
   const [fetchingMoreData, setFetchingMoreData] = useState(false);
   const [selectedTicker, setSelectedTicker] = useState(Ticker); // Default ticker
   
+  
 
+  const handleTransaction = async (transactionType, price, quantity) => {
+    try {
+        const response = await axios.post(
+            "http://www.sample.com/backend/webserver_backend.php",
+            { type: "PERFORM_TRANSACTION", ticker: ticker, transactionType: transactionType, price: price, quantity: quantity },
+            { withCredentials: true }
+        );
 
+        console.log("Transaction Response:", response);
+        if (response.status === 200 && response.data) {
+            console.log("Transaction successful:", response.data);
+            // Update user account with new transaction data
+            // setUserAccount(response.data);
+        }
+        
+
+    } catch (error) {
+        console.error("Error connecting to server:", error);
+        setError("Transaction failed.");
+    }
+};
 
   const stockData={ticker:"TSLA", name: "Tesla" , marketCap: 12912759190.3, description:"Tesla stock (TSLA) is a stock that represents ownership in Tesla, Inc., a company that designs, manufactures, and sells electric vehicles and energy storage systems.", sector:"Consumer Discretionary"}
   // Define your delay in seconds (24 hours = 86400 seconds)
@@ -314,7 +335,7 @@ function TradingChart({Ticker}) {
         <Transaction 
           stockData={stockData} 
           chartData={chartData} 
-          onTransaction={(type, amount, qty) => { console.log(amount, type, qty) }} 
+          onTransaction={handleTransaction}
         />
       </div>
     </div>
