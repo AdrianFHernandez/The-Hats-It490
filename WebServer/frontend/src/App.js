@@ -3,7 +3,7 @@ import './App.css';
 import RegisterPage from './Pages/RegisterPage';
 import LoginPage from './Pages/LoginPage';
 import HomePage from './Pages/HomePage';
-import TransactionsPage from './Pages/TransactionsPage';
+import SearchAllStocks from './Pages/SearchAllStocks';
 import axios from 'axios';
 import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom"; 
 
@@ -96,8 +96,8 @@ function App() {
                 <Navigate to="/" replace />
               )
             } />
-              <Route path="/transactions" element={
-                loggedIn ? <TransactionsPage user={userInfo} handleLogout={handleLogout} /> : <Navigate to="/" replace /> 
+              <Route path="/searchallatocks" element={
+                loggedIn ? <SearchAllStocks user={userInfo} handleLogout={handleLogout} /> : <Navigate to="/" replace /> 
               } />
 
           </Routes>

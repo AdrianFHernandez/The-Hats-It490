@@ -35,7 +35,7 @@ function requestProcessor($request)
         case "GET_ACCOUNT_INFO":
             return doGetAccountInfo($request["payload"]['sessionId']);
         case "GET_STOCK_INFO":
-            return doGetStockInfo($request["payload"]['sessionId'], $request["payload"]['ticker']);
+            return doGetStockInfo($request["payload"]['sessionId'], $request["payload"]);
         case "GET_STOCKS_BASED_ON_RISK":
             return GetStocksBasedOnRisk($request["payload"]['sessionId'] );
         case "PERFORM_TRANSACTION":
