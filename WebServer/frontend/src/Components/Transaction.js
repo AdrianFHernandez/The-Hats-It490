@@ -13,13 +13,13 @@ function Transaction({ stockData , chartData,  onTransaction }) {
   
   const handleBuy = () => {
     if (latestPrice) {
-      onTransaction("buy", latestPrice, quantity);
+      onTransaction("BUY", latestPrice, quantity);
     }
   };
 
   const handleSell = () => {
     if (latestPrice) {
-      onTransaction("sell", latestPrice, quantity);
+      onTransaction("SELL", latestPrice, quantity);
     }
   };
 

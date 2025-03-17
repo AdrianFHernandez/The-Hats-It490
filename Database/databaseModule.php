@@ -468,23 +468,30 @@ function performTransaction($sessionId, $ticker, $quantity, $price, $transaction
             $stmt->close();
         }
 
-        // Log Transaction
+        $transactionType = strtoupper(trim($transactionType)); // Ensure valid ENUM
+
+        if (!in_array($transactionType, ['BUY', 'SELL'])) {
+            return buildResponse("TRANSACTION_RESPONSE", "FAILED", ["message" => "Invalid transaction type"]);
+        }
+        
         $timestamp = time();
-        $stmt = $db->prepare("INSERT INTO Transactions (account_id, ticker, quantity, price, transaction_type, timestamp) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("isidis", $accountId, $ticker, $quantity, $price, $transactionType, $timestamp);
+       
+        $stmt = $db->prepare("INSERT INTO Transactions (account_id, ticker, quantity, price, transaction_type, timestamp) 
+                              VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("isidss", $accountId, $ticker, $quantity, $price, $transactionType, $timestamp);
         $stmt->execute();
         $stmt->close();
+        
 
         $db->commit();
         return buildResponse("PERFORM_TRANSACTION_RESPONSE", "SUCCESS", ["message" => "Transaction completed successfully"]);
     } catch (Exception $e) {
         $db->rollback();
-        return buildResponse("PERFORM_TRANSACTION_RESPONSE", "FAILED", ["message" => $e->getMessage()]);
+        return buildResponse("PERFORM_TRANSACTION_RESPONSE", "FAILED", ["message" => $e->getMessage() . $transactionType]);
     } finally {
         $db->close();
     }
 }
-
 
 
 ?>
