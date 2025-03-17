@@ -248,18 +248,34 @@ function handleGetAccountInfo(){
 }
 
 function handleGetStockInfo($data){
-    $ticker = $data["ticker"];
     // Send logout request to RabbitMQ
     if (!isset($_COOKIE['PHPSESSID'])) {
         echo json_encode(["success" => true, "message" => "Session cookie not set"]);
         exit();
     }
-     
+    
+    $ticker = $data['ticker'] ?? '';
+    $marketCapMin = $data['marketCapMin'] ?? '';
+    $marketCapMax = $data['marketCapMax'] ?? '';
+
+    
     $client = get_client();
-    $request = buildRequest('GET_STOCK_INFO', [
-        'sessionId' => $_COOKIE['PHPSESSID'],
-        'ticker' => $ticker
-    ]);
+
+    $request = null;
+
+    if ($ticker){
+        $request = buildRequest('GET_STOCK_INFO', [
+            'sessionId' => $_COOKIE['PHPSESSID'],
+            'ticker' => $ticker
+        ]);
+    }
+    else{
+        $request = buildRequest('GET_STOCK_INFO', [
+            'sessionId' => $_COOKIE['PHPSESSID'],
+            'marketCapMin' => $marketCapMin,
+            'marketCapMax' => $marketCapMax
+        ]);
+    }
     
     $response = $client->send_request($request);
     

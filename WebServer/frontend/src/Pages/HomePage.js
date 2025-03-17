@@ -46,8 +46,8 @@ function HomePage({ user, handleLogout }) {
     <div className="homepage container">
       <h1>Welcome to your Home Page</h1>
 
-        <Link to="/transactions">
-          <button>View Transactions</button>
+        <Link to="/searchallstocks">
+          <button>Search for stocks</button>
         </Link>
 
 

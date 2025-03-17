@@ -4,6 +4,7 @@ require_once('path.inc');
 require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 require_once('data.php');
+require_once('CollectAllStocks.php');
 
 function requestProcessor($request)
 {
@@ -23,6 +24,8 @@ function requestProcessor($request)
       return fetchAllTickers();
     case "getStocksBasedOnRisk":
       return getStocksBasedOnRisk($request['risk'], $request['riskFactor']);
+    case "FETCH_ALL_STOCKS":
+        return fetchActiveStocks();
   }
 
   return buildResponse("ERROR", "FAILED", ["message" => "Request type not supported"]);
