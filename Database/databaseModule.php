@@ -384,5 +384,107 @@ function getUserIDfromSession(string $sessionId){
 }
 
 
+function performTransaction($sessionId, $ticker, $quantity, $price, $transactionType) {
+    
+    if (($userId = getUserIDfromSession($sessionId)) === null) {
+        return buildResponse("PERFORM_TRANSACTION_RESPONSE", "FAILED", ["message" => "Invalid or expired session."]);
+    }
+    $db = dbConnect();
+
+    // Step 2: Get accountID from userID
+    $stmt = $db->prepare("SELECT account_id FROM Accounts WHERE user_id = ?");
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $stmt->bind_result($accountId);
+    $stmt->fetch();
+    $stmt->close();
+
+    if (!$accountId) {
+        return buildResponse("PERFORM_TRANSACTION_RESPONSE", "FAILED", ["message" => "User has no trading account."]);
+    }
+
+    // Step 3: Process Transaction 
+    $db->begin_transaction();
+    try {
+        if ($transactionType === 'BUY') {
+            // Check Buying Power
+            $stmt = $db->prepare("SELECT buying_power FROM Accounts WHERE account_id = ?");
+            $stmt->bind_param("i", $accountId);
+            $stmt->execute();
+            $stmt->bind_result($buyingPower);
+            $stmt->fetch();
+            $stmt->close();
+
+            $cost = $quantity * $price;
+            if ($buyingPower < $cost) {
+                throw new Exception("Insufficient buying power.");
+            }
+
+            // Deduct buying power
+            $stmt = $db->prepare("UPDATE Accounts SET buying_power = buying_power - ?, total_balance = total_balance - ? WHERE account_id = ?");
+            $stmt->bind_param("ddi", $cost, $cost, $accountId);
+            $stmt->execute();
+            $stmt->close();
+
+            // Update Portfolio
+            $stmt = $db->prepare("INSERT INTO Portfolios (account_id, ticker, quantity, average_price) VALUES (?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE 
+                quantity = quantity + VALUES(quantity), 
+                average_price = ((quantity * average_price) + (VALUES(quantity) * VALUES(average_price))) / (quantity + VALUES(quantity))");
+            $stmt->bind_param("isid", $accountId, $ticker, $quantity, $price);
+            $stmt->execute();
+            $stmt->close();
+        } 
+        elseif ($transactionType === 'SELL') {
+            // Check Portfolio Holdings
+            $stmt = $db->prepare("SELECT quantity FROM Portfolios WHERE account_id = ? AND ticker = ?");
+            $stmt->bind_param("is", $accountId, $ticker);
+            $stmt->execute();
+            $stmt->bind_result($currentShares);
+            $stmt->fetch();
+            $stmt->close();
+
+            if ($currentShares < $quantity) {
+                throw new Exception("Not enough shares to sell.");
+            }
+
+            // Update Portfolio
+            $remainingShares = $currentShares - $quantity;
+            if ($remainingShares == 0) {
+                $stmt = $db->prepare("DELETE FROM Portfolios WHERE account_id = ? AND ticker = ?");
+                $stmt->bind_param("is", $accountId, $ticker);
+            } else {
+                $stmt = $db->prepare("UPDATE Portfolios SET quantity = ? WHERE account_id = ? AND ticker = ?");
+                $stmt->bind_param("iis", $remainingShares, $accountId, $ticker);
+            }
+            $stmt->execute();
+            $stmt->close();
+
+            // Add money to buying power
+            $profit = $quantity * $price;
+            $stmt = $db->prepare("UPDATE Accounts SET buying_power = buying_power + ?, total_balance = total_balance + ? WHERE account_id = ?");
+            $stmt->bind_param("ddi", $profit, $profit, $accountId);
+            $stmt->execute();
+            $stmt->close();
+        }
+
+        // Log Transaction
+        $timestamp = time();
+        $stmt = $db->prepare("INSERT INTO Transactions (account_id, ticker, quantity, price, transaction_type, timestamp) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("isidis", $accountId, $ticker, $quantity, $price, $transactionType, $timestamp);
+        $stmt->execute();
+        $stmt->close();
+
+        $db->commit();
+        return buildResponse("PERFORM_TRANSACTION_RESPONSE", "SUCCESS", ["message" => "Transaction completed successfully"]);
+    } catch (Exception $e) {
+        $db->rollback();
+        return buildResponse("PERFORM_TRANSACTION_RESPONSE", "FAILED", ["message" => $e->getMessage()]);
+    } finally {
+        $db->close();
+    }
+}
+
+
 
 ?>

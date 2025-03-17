@@ -27,10 +27,10 @@ CREATE TABLE `Users` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 
-
+-- ----------------------
+-- Table structure for `Sessions`
+-- -----------------------
 DROP TABLE IF EXISTS `Sessions`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `Sessions` (
   `session_id` varchar(225) NOT NULL,
   `user_id` int NOT NULL,
@@ -39,6 +39,7 @@ CREATE TABLE `Sessions` (
   KEY `user_id` (`user_id`),
   CONSTRAINT `Sessions_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `Users` (`userID`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 
 -- ------------------------------------------------------
 -- Table structure for table `Accounts`
@@ -66,8 +67,13 @@ CREATE TABLE `Stocks` (
   `industry` varchar(100) DEFAULT NULL,
   `price` decimal(15,2) DEFAULT NULL,
   `exchange` varchar(50) DEFAULT NULL,
-  'description' varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`ticker`)
+  `description` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`ticker`),
+  KEY `idx_name` (`name`),
+  KEY `idx_sector` (`sector`),
+  KEY `idx_industry` (`industry`),
+  KEY `idx_marketCap` (`marketCap`),
+  KEY `idx_price` (`price`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- ------------------------------------------------------

@@ -247,6 +247,21 @@ function handleGetAccountInfo(){
 
 }
 
+function handlePerformTransaction($data){
+
+    if (!isset($_COOKIE['PHPSESSID'])) {
+        echo json_encode(["success" => true, "message" => "Session cookie not set"]);
+        exit();
+    }
+
+    $ticker = $data["ticker"];
+    $quantity = $data["quantity"];
+    $price = $data["price"];
+    $type = $data["type"];
+
+    echo json_encode(["success" => true, "message" => "Transaction completed with " . $ticker . " " . $quantity . " " . $price . " " . $type]);
+    
+}
 function handleGetStockInfo($data){
     $ticker = $data["ticker"];
     // Send logout request to RabbitMQ
@@ -302,6 +317,9 @@ switch ($data['type']) {
         break;
     case 'GET_STOCKS_BASED_ON_RISK':
         handleGetStocksBasedOnRisk($data);
+        break;
+    case 'PERFORM_TRANSACTION':
+        handlePerformTransaction($data);
         break;
     default:
         echo json_encode(["error" => "Unknown request type"]);
