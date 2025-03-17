@@ -9,8 +9,8 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-d
 
 function App() {
   const [registering, setRegistering] = useState(false);
-  const [loggedIn, setLoggedIn] = useState(true); // change to false
-  const [loading, setLoading] = useState(false);  // change to true
+  const [loggedIn, setLoggedIn] = useState(false); 
+  const [loading, setLoading] = useState(true);  
   const [userInfo, setUserInfo] = useState(null);
 
   useEffect(() => {
@@ -20,13 +20,14 @@ function App() {
       try {
         const response = await axios.post(
           "http://www.sample.com/backend/webserver_backend.php",
-          { type: "validateSession" },
+          { type: "VALIDATE_SESSION" },
           { withCredentials: true }
         );
   
         
           console.log("Session Validation Response:", response.data);
           if (response.data.valid) {
+            console.log("User is logged in!");
             setLoggedIn(true);
             setUserInfo(response.data.user);
           } else {
@@ -39,10 +40,9 @@ function App() {
         setLoading(false);
       }
     };
-
-    setUserInfo({"username":"tds22"}) // remove this
   
-    //validateSession(); un comment
+  
+    validateSession(); 
     
     
   }, []);
@@ -52,7 +52,7 @@ function App() {
     try {
       await axios.post(
         "http://www.sample.com/backend/webserver_backend.php",
-        { type: "logout" },
+        { type: "LOGOUT" },
         { withCredentials: true }
       );
 
@@ -97,7 +97,7 @@ function App() {
               )
             } />
               <Route path="/transactions" element={
-                true ? <TransactionsPage user={userInfo} handleLogout={handleLogout} /> : <Navigate to="/" replace /> //CHANGE TO loggedIN instead of true
+                loggedIn ? <TransactionsPage user={userInfo} handleLogout={handleLogout} /> : <Navigate to="/" replace /> 
               } />
 
           </Routes>

@@ -1,8 +1,4 @@
 <?php
-
-
-
-
 // CORS Headers
 header('Access-Control-Allow-Origin: http://localhost:3000'); // Update if frontend is deployed
 header('Access-Control-Allow-Credentials: true');
@@ -16,10 +12,13 @@ if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
     exit();
 }
 
+
 // Include RabbitMQ connection
 require_once('path.inc');
 require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
+
+
 
 // Decode incoming JSON request
 $data = json_decode(file_get_contents("php://input"), true);
@@ -28,6 +27,24 @@ $data = json_decode(file_get_contents("php://input"), true);
 if (!$data || !isset($data['type'])) {
     echo json_encode(["error" => "Invalid request"]);
     exit();
+}
+
+$client = null;
+
+function get_client(){
+    global $client;
+    if($client == null){
+        $client = new rabbitMQClient("HatsRabbitMQ.ini", "Server");
+    }
+    return $client;
+}
+
+function buildRequest($type, $payload = []){
+    return [
+        "type" => $type,
+        "timestamp" => time(),
+        "payload" => $payload
+    ];
 }
 
 // Function to handle user registration
@@ -43,21 +60,22 @@ function handleRegister($data) {
     }
 
     // Send registration request to RabbitMQ
-    $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
-    $request = [
-        'type' => 'register',
+    $client = get_client();
+
+    $request = buildRequest('REGISTER', [
         'name' => $name,
         'username' => $username,
         'email' => $email,
         'password' => $password
-    ];
+    ]);
+
 
     $response = $client->send_request($request);
 
-    if ($response && isset($response['returnCode']) && $response['returnCode'] === '0') {
-        echo json_encode(["success" => true, "message" => $response['message']]);
+    if ($response && $response['status'] === 'SUCCESS' && $response["type"] === "REGISTER_RESPONSE") {
+        echo json_encode(["success" => true, "message" => $response['payload']['message']]);
     } else {
-        echo json_encode(["error" => $response['message'] ?? "Registration failed"]);
+        echo json_encode(["error" => $response['payload']['message'] ?? "Registration failed"]);
     }
 }
 
@@ -72,23 +90,28 @@ function handleLogin($data) {
     }
 
     // Send login request to RabbitMQ
-    $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
-    $request = ['type' => 'login', 'username' => $username, 'password' => $password];
+    $client = get_client();
+    $request = buildRequest('LOGIN', [
+        'username' => $username,
+        'password' => $password
+    ]);
 
     $response = $client->send_request($request);
 
-    if ($response && isset($response['returnCode']) && $response['returnCode'] === '0') {
-        // $session_id = $response['session']['sessionId'];
+    if ($response && $response['status'] === "SUCCESS" && $response['type'] === 'LOGIN_RESPONSE') {
+        $session_id = $response["payload"]['session']['sessionId'];
+        $session_expires = $response["payload"]['session']['expiresAt'];
         // set session_id in browser cookie with same site attribute as None
         
         setcookie("PHPSESSID", $session_id, [
-            "expires" => 0,
+            "expires" => $session_expires,
             "path" => "/",
             "domain" => "www.sample.com",
             "secure" => false,
             "httponly" => true,
             "samesite" => "lax"
         ]);
+
         echo json_encode([
             "success" => true,
              "sessionId" => $session_id,
@@ -108,16 +131,18 @@ function handleValidateSession() {
     }
     
     // Send session validation request to RabbitMQ
-    $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
-    $request = ['type' => 'validateSession', 'sessionId' => $_COOKIE['PHPSESSID']];
+    $client = get_client();
+    $request = buildRequest('VALIDATE_SESSION', [
+        'sessionId' => $_COOKIE['PHPSESSID']
+    ]);
+
     $response = $client->send_request($request);
     
     // echo json_encode($response);
-    if ($response && isset($response['valid']) && $response['valid']) {
+    if ($response && $response["status"] === "SUCCESS" && $response["type"] === "VALIDATE_SESSION_RESPONSE") {
         echo json_encode([
             "valid" => true,
-            "user" => $response['user'],
-            "sessionId" => $response['sessionId']
+            "user" => $response["payload"]['user']
         ]);
     } else {
         // Clear session cookie
@@ -143,11 +168,14 @@ function handleLogout() {
         exit();
     }
 
-    $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
-    $request = ['type' => 'logout', 'sessionId' => $_COOKIE['PHPSESSID']];
+    $client = get_client();
+    $request = buildRequest('LOGOUT', [
+        'sessionId' => $_COOKIE['PHPSESSID']
+    ]);
+    
     $response = $client->send_request($request);
 
-    if ($response && isset($response['success']) && $response['success']) {
+    if ($response && $response['status'] === "SUCCESS" && $response['type'] === 'LOGOUT_RESPONSE') {
         // Clear session cookie
         //Test cookie setting over http
         setcookie("PHPSESSID", "", [
@@ -172,19 +200,23 @@ function handleGetAccountInfo(){
         echo json_encode(["success" => true, "message" => "Session cookie not set"]);
         exit();
     }
-
-    $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
-    $request = ['type' => 'getAccountInfo', 'sessionId' => $_COOKIE['PHPSESSID']];
+    
+    $client = get_client();
+    $request = buildRequest('GET_ACCOUNT_INFO', [
+        'sessionId' => $_COOKIE['PHPSESSID']
+    ]);
+    
     $response = $client->send_request($request);
 
     // echo json_encode($response);
-    if ($response && isset($response['valid']) && $response['valid']) {
+    if ($response && $response["status"] === "SUCCESS" && $response["type"] === "GET_ACCOUNT_INFO_RESPONSE") {
+        $payload = $response["payload"];
         echo json_encode([
-            "userStocks" => $response['user']['userStocks'],
-            "userCashBalance" => $response['user']['userBalance']['cashBalance'],
-            "userStockBalance" => $response['user']['userBalance']['stockBalance'],
-            "userTotalBalance" => $response['user']['userBalance']['totalBalance'],
-            "sessionId" => $response['sessionId']
+            "userStocks" => $payload['user']['userStocks'],
+            "userCashBalance" => $payload['user']['userBalance']['cashBalance'],
+            "userStockBalance" => $payload['user']['userBalance']['stockBalance'],
+            "userTotalBalance" => $payload['user']['userBalance']['totalBalance'],
+    
 
     // EXPECTING SOMETHING LIKE THIS:
     // return response = {
@@ -215,22 +247,25 @@ function handleGetAccountInfo(){
 
 }
 
-function handleGetStockInfo(){
+function handleGetStockInfo($data){
+    $ticker = $data["ticker"];
     // Send logout request to RabbitMQ
     if (!isset($_COOKIE['PHPSESSID'])) {
         echo json_encode(["success" => true, "message" => "Session cookie not set"]);
         exit();
     }
-
-    $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
-    $request = ['type' => 'getStockInfo', 'sessionId' => $_COOKIE['PHPSESSID']];
+     
+    $client = get_client();
+    $request = buildRequest('GET_STOCK_INFO', [
+        'sessionId' => $_COOKIE['PHPSESSID'],
+        'ticker' => $ticker
+    ]);
+    
     $response = $client->send_request($request);
-
-
-    // echo json_encode($response);
-    if ($response && isset($response['valid']) && $response['valid']) {
+    
+    if ($response && $response["status"] === "SUCCESS" && $response["type"] === "GET_STOCK_INFO_RESPONSE") {
         echo json_encode([
-            "tickerPrice" => $response["tickerPrice"]
+            $response["payload"]["data"]
         ]);
     }
     else{
@@ -240,26 +275,33 @@ function handleGetStockInfo(){
 
 }
 
+function handleGetStocksBasedOnRisk($data){
+    
+    return "Not implemented yet";
+}
 
 // Process API requests
 switch ($data['type']) {
-    case 'register':
+    case 'REGISTER':
         handleRegister($data);
         break;
-    case 'login':
+    case 'LOGIN':
         handleLogin($data);
         break;
-    case 'validateSession':
+    case 'VALIDATE_SESSION':
         handleValidateSession();
         break;
-    case 'logout':
+    case 'LOGOUT':
         handleLogout();
         break;
-    case 'getAccountInfo':
+    case 'GET_ACCOUNT_INFO':
         handleGetAccountInfo();
         break;
-    case 'getStockInfo' :
-        handleGetStockInfo();
+    case 'GET_STOCK_INFO':
+        handleGetStockInfo($data);
+        break;
+    case 'GET_STOCKS_BASED_ON_RISK':
+        handleGetStocksBasedOnRisk($data);
         break;
     default:
         echo json_encode(["error" => "Unknown request type"]);

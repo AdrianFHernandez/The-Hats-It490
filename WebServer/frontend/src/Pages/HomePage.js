@@ -1,7 +1,7 @@
 import React, {useState, useEffect} from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
-
+import TradingChart from "../Components/TradingChart";
 
 function HomePage({ user, handleLogout }) {
 
@@ -19,17 +19,10 @@ function HomePage({ user, handleLogout }) {
       try {
         const response = await axios.post(
           "http://www.sample.com/backend/webserver_backend.php",
-          { type: "getAccountInfo"},
+          { type: "GET_ACCOUNT_INFO"},
           { withCredentials: true } // Send cookies
         );
 
-        // echo json_encode([
-        //   "userStocks" => $response['user']['userStocks'],
-        //   "userCashBalance" => $response['user']['userBalance']['cashBalance'],
-        //   "userStockBalance" => $response['user']['userBalance']['stockBalance'],
-        //   "userTotalBalance" => $response['user']['userBalance']['totalBalance'],
-        //   "sessionId" => $response['sessionId']
-  
         console.log(JSON.stringify(response.data));
   
         if (response.data.success) {
@@ -62,6 +55,8 @@ function HomePage({ user, handleLogout }) {
         <div>
           <h3>Logged in as: {user.username}</h3>
 
+          <button onClick={handleLogout}>Logout</button>
+          <TradingChart Ticker={"TSLA"}></TradingChart>
           {haveUserBalance ? <h2> Your current balance is : {userBalance} </h2> : <h2> Loading your balance</h2>}
           <button onClick={handleLogout}>Logout</button>
 
