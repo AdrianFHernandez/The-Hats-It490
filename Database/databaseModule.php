@@ -9,7 +9,7 @@ function getClientForDMZ()
 {
     global $client;
     if ($client === null) {
-        $client = new rabbitMQClient("HatsDMZRabbitMQ.ini", "Server");
+        $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
 
     }
     return $client;

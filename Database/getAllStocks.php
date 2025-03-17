@@ -1,7 +1,7 @@
 <?php
 
 function getAllStock() {
-    $client = new rabbitMQClient("HatsDMZRabbitMQ.ini", "Server");
+    $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
 
     $request = [
         "type" => "fetchAllTickers"

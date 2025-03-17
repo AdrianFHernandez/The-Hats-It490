@@ -35,7 +35,7 @@ $request = [
     "end" => 1741651200
 ];
 
-$client = new rabbitMQClient("HatsDMZRabbitMQ.ini", "Server");
+$client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
 $response = $client->send_request($request);
 
 // print_r($response);
