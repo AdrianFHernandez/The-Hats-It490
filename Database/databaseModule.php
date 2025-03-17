@@ -294,7 +294,7 @@ function doGetAccountInfo($sessionId)
 }
 
 
-function doGetStockInfo($sessionId, $ticker)
+function doGetStockInfo($sessionId, $payload)
 {
     if (getUserIDfromSession($sessionId) === null) {
         return buildResponse("GET_STOCK_INFO_RESPONSE", "FAILED", ["error" => "Invalid session"]);
@@ -302,52 +302,64 @@ function doGetStockInfo($sessionId, $ticker)
 
     $conn = dbConnect();
 
-    $query = "
-        SELECT ticker, name
+    $ticker = $payload['ticker'] ?? '';
+    $marketCapMin = $payload['marketCapMin'] ?? '';
+    $marketCapMax = $payload['marketCapMax'] ?? '';
+    
+    if ($ticker) {
+        $query = "
+        SELECT ticker, name, marketCap, sector, industry, price, exchange
         FROM AllStockTickers 
         WHERE ticker LIKE ?
         LIMIT 7
-    ";
-
-    $stmt = $conn->prepare($query);
-    if (!$stmt) {
-        return buildResponse("GET_STOCK_INFO_RESPONSE", "FAILED", ["error" => "Database error"]);
+        ";
+        
+        $stmt = $conn->prepare($query);
+        if (!$stmt) {
+            return buildResponse("GET_STOCK_INFO_RESPONSE", "FAILED", ["error" => "Database error"]);
+        }
+        
+        $searchPattern = $ticker . "%";
+        $stmt->bind_param("s", $searchPattern);
+    } else {
+        if (!is_numeric($marketCapMin) || !is_numeric($marketCapMax)) {
+            return buildResponse("GET_STOCK_INFO_RESPONSE", "FAILED", ["error" => "Invalid market cap range"]);
+        }
+        
+        $query = "
+        SELECT ticker, name, marketCap, sector, industry, price, exchange 
+        FROM STOCKS 
+        WHERE marketCap >= ? AND marketCap <= ?
+        ";
+        
+        $stmt = $conn->prepare($query);
+        if (!$stmt) {
+            return buildResponse("GET_STOCK_INFO_RESPONSE", "FAILED", ["error" => "Database error"]);
+        }
+        
+        $stmt->bind_param("dd", $marketCapMin, $marketCapMax);
     }
-
-    // Use '%' wildcard only at the end to match prefixes
-    $searchPattern = $ticker . "%";
-    $stmt->bind_param("s", $searchPattern);
+    
     $stmt->execute();
-    $stmt->bind_result($foundTicker, $name);
+    $stmt->bind_result($foundTicker, $name, $marketCap, $sector, $industry, $price, $exchange);
 
     $stocks = [];
 
     while ($stmt->fetch()) {
-        $stocks[$foundTicker] = [
+        $stocks[] = [
             "ticker" => $foundTicker,
             "companyName" => $name,
+            "marketCap" => $marketCap,
+            "sector" => $sector,
+            "industry" => $industry,
+            "price" => $price,
+            "exchange" => $exchange
         ];
     }
 
     $stmt->close();
     $conn->close();
 
-    /*
-    if (!empty($stocks)) {
-        $client = new rabbitMQClient("HatsDMZRabbitMQ.ini", "Server");
-        foreach ($stocks as $key => $stock) {
-            $request = [
-                "type" => "get_latest_price",
-                "ticker" => $stock['ticker'],
-            ];
-            $response = $client->send_request($request);
-
-            if ($response) {
-                $stocks[$key]["price"] = $response['close'];    
-            }
-        }
-    }
-    */
     return buildResponse("GET_STOCK_INFO_RESPONSE", "SUCCESS", ["data" => $stocks]);
 }
 
