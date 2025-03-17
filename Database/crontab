@@ -1,0 +1,3 @@
+55 * * * * /usr/bin/php /home/tds22-it490/The-Hats-It490/Database/updateStocks2.php >> /home/tds22-it490/The-Hats-It490/Database/cronfile2.log 2>&1
+
+
