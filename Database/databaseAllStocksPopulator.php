@@ -47,7 +47,7 @@ function fetchAndStoreAllStocks() {
             $description = trim($stock['description'] ?? '');
 
             if (!empty($ticker) && !empty($name)) {
-                $stmt->bind_param("ssdsdsss", 
+                $stmt->bind_param("ssdssdss", 
                     $ticker, $name, $marketCap, $sector, $industry, $price, $exchange, $description
                 );
                 $stmt->execute();

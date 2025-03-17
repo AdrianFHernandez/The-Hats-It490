@@ -398,8 +398,47 @@ function getUserIDfromSession(string $sessionId){
 }
 
 
+function updateTotalBalance($db, $accountId) {
+    $buyingPower = 0.0;
+    $portfolioValue = 0.0;
+    // Get Buying Power
+    $stmt = $db->prepare("SELECT buying_power FROM Accounts WHERE account_id = ?");
+    $stmt->bind_param("i", $accountId);
+    $stmt->execute();
+    $stmt->bind_result($buyingPower);
+    $stmt->fetch();
+    $stmt->close();
+
+    // Ensure buyingPower has a default value
+    if ($buyingPower === null) {
+        $buyingPower = 0.0; // Default to 0 if no record is found
+    }
+
+    // Get Portfolio Value (SUM(quantity * average_price))
+    $stmt = $db->prepare("SELECT COALESCE(SUM(quantity * average_price), 0) FROM Portfolios WHERE account_id = ?");
+    $stmt->bind_param("i", $accountId);
+    $stmt->execute();
+    $stmt->bind_result($portfolioValue);
+    $stmt->fetch();
+    $stmt->close();
+
+    // Ensure portfolioValue is not null
+    if ($portfolioValue === null) {
+        $portfolioValue = 0.0;
+    }
+
+    // Compute total_balance
+    $totalBalance = $buyingPower + $portfolioValue;
+
+    // Update total_balance in Accounts table
+    $stmt = $db->prepare("UPDATE Accounts SET total_balance = ? WHERE account_id = ?");
+    $stmt->bind_param("di", $totalBalance, $accountId);
+    $stmt->execute();
+    $stmt->close();
+}
+
+
 function performTransaction($sessionId, $ticker, $quantity, $price, $transactionType) {
-    
     if (($userId = getUserIDfromSession($sessionId)) === null) {
         return buildResponse("PERFORM_TRANSACTION_RESPONSE", "FAILED", ["message" => "Invalid or expired session."]);
     }
@@ -417,7 +456,6 @@ function performTransaction($sessionId, $ticker, $quantity, $price, $transaction
         return buildResponse("PERFORM_TRANSACTION_RESPONSE", "FAILED", ["message" => "User has no trading account."]);
     }
 
-    // Step 3: Process Transaction 
     $db->begin_transaction();
     try {
         if ($transactionType === 'BUY') {
@@ -434,14 +472,15 @@ function performTransaction($sessionId, $ticker, $quantity, $price, $transaction
                 throw new Exception("Insufficient buying power.");
             }
 
-            // Deduct buying power
-            $stmt = $db->prepare("UPDATE Accounts SET buying_power = buying_power - ?, total_balance = total_balance - ? WHERE account_id = ?");
-            $stmt->bind_param("ddi", $cost, $cost, $accountId);
+            // Deduct buying power (
+            $stmt = $db->prepare("UPDATE Accounts SET buying_power = buying_power - ? WHERE account_id = ?");
+            $stmt->bind_param("di", $cost, $accountId);
             $stmt->execute();
             $stmt->close();
 
-            // Update Portfolio
-            $stmt = $db->prepare("INSERT INTO Portfolios (account_id, ticker, quantity, average_price) VALUES (?, ?, ?, ?)
+            // Update Portfolio (average price calculation)
+            $stmt = $db->prepare("INSERT INTO Portfolios (account_id, ticker, quantity, average_price) 
+                VALUES (?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE 
                 quantity = quantity + VALUES(quantity), 
                 average_price = ((quantity * average_price) + (VALUES(quantity) * VALUES(average_price))) / (quantity + VALUES(quantity))");
@@ -476,36 +515,32 @@ function performTransaction($sessionId, $ticker, $quantity, $price, $transaction
 
             // Add money to buying power
             $profit = $quantity * $price;
-            $stmt = $db->prepare("UPDATE Accounts SET buying_power = buying_power + ?, total_balance = total_balance + ? WHERE account_id = ?");
-            $stmt->bind_param("ddi", $profit, $profit, $accountId);
+            $stmt = $db->prepare("UPDATE Accounts SET buying_power = buying_power + ? WHERE account_id = ?");
+            $stmt->bind_param("di", $profit, $accountId);
             $stmt->execute();
             $stmt->close();
         }
 
-        $transactionType = strtoupper(trim($transactionType)); // Ensure valid ENUM
+        // Update total_balance after modifying portfolio and buying power
+        updateTotalBalance($db, $accountId);
 
-        if (!in_array($transactionType, ['BUY', 'SELL'])) {
-            return buildResponse("TRANSACTION_RESPONSE", "FAILED", ["message" => "Invalid transaction type"]);
-        }
-        
         $timestamp = time();
-       
         $stmt = $db->prepare("INSERT INTO Transactions (account_id, ticker, quantity, price, transaction_type, timestamp) 
                               VALUES (?, ?, ?, ?, ?, ?)");
         $stmt->bind_param("isidss", $accountId, $ticker, $quantity, $price, $transactionType, $timestamp);
         $stmt->execute();
         $stmt->close();
-        
 
         $db->commit();
         return buildResponse("PERFORM_TRANSACTION_RESPONSE", "SUCCESS", ["message" => "Transaction completed successfully"]);
     } catch (Exception $e) {
         $db->rollback();
-        return buildResponse("PERFORM_TRANSACTION_RESPONSE", "FAILED", ["message" => $e->getMessage() . $transactionType]);
+        return buildResponse("PERFORM_TRANSACTION_RESPONSE", "FAILED", ["message" => $e->getMessage()]);
     } finally {
         $db->close();
     }
 }
+
 
 
 ?>
