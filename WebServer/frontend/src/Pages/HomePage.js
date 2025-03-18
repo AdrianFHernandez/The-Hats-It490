@@ -2,13 +2,14 @@ import React, {useState, useEffect} from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import TradingChart from "../Components/TradingChart";
+import Portfolio from "../Components/Portfolio";
 
 function HomePage({ user, handleLogout }) {
 
   // useState that runs to retrieve userBalance 
   const [userBalance, setUserBalance] = useState(null)
   const [haveUserBalance, gettingUserBalance] = useState(false)
-  const[userInfo, setUserInfo] = useState(null)
+  const [account, setAccount] = useState(null)
   const [error, setError] = useState("");
 
 
@@ -25,9 +26,10 @@ function HomePage({ user, handleLogout }) {
 
         console.log(JSON.stringify(response.data));
   
-        if (response.data.success) {
+        if (response.data) {
           gettingUserBalance(true)
-          setUserBalance(response.data.userTotalBalance)
+          // setUserBalance(response.data.userTotalBalance)
+          setAccount(response.data)
         } else {
           setError("Unable to get user balance");
         }
@@ -40,7 +42,7 @@ function HomePage({ user, handleLogout }) {
 
 
 
-  }, [userBalance])
+  }, [])
   
   return (
     <div className="homepage container">
@@ -57,6 +59,8 @@ function HomePage({ user, handleLogout }) {
 
           <button onClick={handleLogout}>Logout</button>
           <TradingChart Ticker={"TSLA"}></TradingChart>
+          {/* {account && console.log("account", account.user)} */}
+          {account ? <Portfolio userAccount={account.user} ></Portfolio> : <p>Loading portfolio...</p>}
           {haveUserBalance ? <h2> Your current balance is : {userBalance} </h2> : <h2> Loading your balance</h2>}
           <button onClick={handleLogout}>Logout</button>
 

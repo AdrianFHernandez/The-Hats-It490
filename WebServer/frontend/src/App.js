@@ -26,7 +26,7 @@ function App() {
   
         
           console.log("Session Validation Response:", response.data);
-          if (response.data.valid) {
+          if (response.status === 200 && response.data) {
             console.log("User is logged in!");
             setLoggedIn(true);
             setUserInfo(response.data.user);

@@ -211,11 +211,8 @@ function handleGetAccountInfo(){
     // echo json_encode($response);
     if ($response && $response["status"] === "SUCCESS" && $response["type"] === "GET_ACCOUNT_INFO_RESPONSE") {
         $payload = $response["payload"];
-        echo json_encode([
-            "userStocks" => $payload['user']['userStocks'],
-            "userCashBalance" => $payload['user']['userBalance']['cashBalance'],
-            "userStockBalance" => $payload['user']['userBalance']['stockBalance'],
-            "userTotalBalance" => $payload['user']['userBalance']['totalBalance'],
+        echo json_encode($payload["data"]);
+           
     
 
     // EXPECTING SOMETHING LIKE THIS:
@@ -240,7 +237,7 @@ function handleGetAccountInfo(){
     //         }
     //     }
     // }
-        ]);
+        
     } else {
         echo json_encode(["valid" => false, "error" => "Invalid or expired sesasion"]);
     }
@@ -282,7 +279,7 @@ function handlePerformTransaction($data){
 function handleGetStockInfo($data){
     // Send logout request to RabbitMQ
     if (!isset($_COOKIE['PHPSESSID'])) {
-        echo json_encode(["success" => true, "message" => "Session cookie not set"]);
+        echo json_encode(["success" => true, "message" => "Session cookie not set2"]);
         exit();
     }
     
