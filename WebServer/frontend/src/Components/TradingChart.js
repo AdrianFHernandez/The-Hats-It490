@@ -175,43 +175,62 @@ function TradingChart({Ticker}) {
     });
   }, []);
 
-  // Fetch data whenever the selected ticker changes.
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        // Clear current data on ticker change
-        setChartData([]);
-        setRemainingData([]);
-        console.log("FEtching " + `${selectedTicker}.json`)
-        const response = await fetch(`${selectedTicker}.json`);
-        const data = await response.json();
-      
-        const nowLocal = Math.floor(Date.now() / 1000);
-        const latestAllowedTime = nowLocal - delaySeconds;
-  
-        // Convert UTC timestamps to local and filter based on the delay
-        const formattedData = data.map(item => ({
-          time: convertUtcToLocal(Math.floor(new Date(item.t).getTime() / 1000)),
-          open: item.o,
-          high: item.h,
-          low: item.l,
-          close: item.c,
-          volume: item.v || 0,
-        }));
-  
-        // Split data into historical (pastData) and future (delayed) segments
-        const pastData = formattedData.filter(item => item.time <= latestAllowedTime);
-        const futureData = formattedData.filter(item => item.time > latestAllowedTime);
-  
-        setChartData(pastData);
-        setRemainingData(futureData);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      }
+        if (!selectedTicker) return;
+
+        try {
+            setChartData([]); 
+            setRemainingData([]);
+
+            const endTime = new Date();
+            const startTime = new Date();
+            startTime.setDate(endTime.getDate() - 21);
+
+            const formattedStart = startTime.toISOString().split("T")[0];
+            const formattedEnd = endTime.toISOString().split("T")[0];
+
+            console.log(`Fetching data for ${selectedTicker} from ${formattedStart} to ${formattedEnd}`);
+
+            const response = await axios.post(
+                "http://www.sample.com/backend/webserver_backend.php",
+                { type: "FETCH_SPECIFIC_STOCK_DATA", ticker: selectedTicker, startTime: formattedStart, endTime: formattedEnd },
+                { withCredentials: true }
+            );
+
+            if (response.status === 200 && response.data) {
+                console.log("Stock Data:", response.data);
+
+                const formattedData = response.data.chartData.map(item => ({
+                    time: item.timestamp, // Keep UNIX timestamp format
+                    open: parseFloat(item.open), 
+                    high: parseFloat(item.high),
+                    low: parseFloat(item.low),
+                    close: parseFloat(item.close),
+                    volume: item.volume ? parseInt(item.volume, 10) : 0
+                }));
+
+                const nowLocal = Math.floor(Date.now() / 1000);
+                const latestAllowedTime = nowLocal - delaySeconds;
+                
+                const pastData = formattedData.filter(item => item.time <= latestAllowedTime);
+                const futureData = formattedData.filter(item => item.time > latestAllowedTime);
+                
+                setChartData(pastData);
+                setRemainingData(futureData);
+            
+                chartRef.current.timeScale().fitContent();
+                
+                
+            }
+        } catch (error) {
+            console.error("Error fetching data:", error);
+        }
     };
 
     fetchData();
-  }, [selectedTicker]);
+}, [selectedTicker]);
+
 
   // Listen for changes in the visible range to fetch more historical data
   useEffect(() => {

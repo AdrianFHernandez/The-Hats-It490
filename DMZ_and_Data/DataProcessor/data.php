@@ -53,14 +53,13 @@ function fetchAllTickers()
     return buildResponse("FETCH_ALL_TICKERS_RESPONSE", "SUCCESS", ["data" => $filteredData, "message" => "Sent tickers to databaseProcessor"]);
 }
 
-function fetch_all_stock_data($ticker, $start, $end) {
+function fetch_specific_stock_chart_data($ticker, $start_date, $end_date) {
     global $api_key;
 
-    // Convert epoch timestamps to YYYY-MM-DD
-    $start_date = date("Y-m-d", $start);
-    $end_date = date("Y-m-d", $end);
+    // // Convert epoch timestamps to YYYY-MM-DD
+    // $start_date = date("Y-m-d", $start);
+    // $end_date = date("Y-m-d", $end);
 
-    echo $start_date . $end_date;
 
     // API URL with correct date format
     $base_url = "https://api.polygon.io/v2/aggs/ticker/$ticker/range/1/minute/$start_date/$end_date?sort=asc&limit=50000&";
@@ -87,7 +86,7 @@ function fetch_all_stock_data($ticker, $start, $end) {
         // Handle HTTP errors
         if ($http_code != 200) {
             echo "Error fetching data: HTTP $http_code - Response: $response\n";
-            return ["returnCode" => '1', "message" => "Failed to fetch stock data"];
+            return buildResponse("FETCH_SPECIFIC_STOCK_DATA_RESPONSE", "FAILED", ["message" => "Failed to fetch stock data"]);
         }
 
         $data = json_decode($response, true);
@@ -122,12 +121,13 @@ function fetch_all_stock_data($ticker, $start, $end) {
             break;
         }
     }
-    print_r($all_data);
+    // print_r($all_data);
     if (!empty($all_data)) {
-        return ["returnCode" => '0', "message" => "Stock data found", "data" => $all_data];
+        return buildResponse("FETCH_SPECIFIC_STOCK_DATA_RESPONSE", "SUCCESS", ["data" => $all_data, "message" => "Stock data found"]);
+        
     } else {
         echo "No data retrieved.\n";
-        return ["returnCode" => '2', "message" => "Stock data not found"];
+        return buildResponse("FETCH_SPECIFIC_STOCK_DATA_RESPONSE", "FAILED", ["message" => "No stock data found"]);
     }
 
 }
@@ -181,5 +181,7 @@ function getStocksBasedOnRisk($risk, $riskFactor) {
 
 // fetch_all_stock_data("TSLA", 1738969811, 1741654317)
 // Example Call (for testing)
-// fetch_all_stock_data('VOO', '2025-01-10', '2025-03-10');
+// $data = fetch_specific_stock_chart_data('VOO', strtotime('2025-02-01'), strtotime('2025-02-14'));
+// dump into a file json
+// file_put_contents('stock_data.json', json_encode($data, JSON_PRETTY_PRINT));
 ?>

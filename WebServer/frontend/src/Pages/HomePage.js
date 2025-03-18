@@ -23,7 +23,7 @@ function HomePage({ user, handleLogout }) {
           { withCredentials: true } // Send cookies
         );
 
-        console.log(JSON.stringify(response.data));
+        console.log(response.data);
   
         if (response.data.success) {
           gettingUserBalance(true)

@@ -17,7 +17,7 @@ function requestProcessor($request)
   switch ($request['type'])
   {
     case "FETCH_SPECIFIC_STOCK_DATA":
-      return fetch_all_stock_data($request["ticker"],$request["start"], $request["end"]);
+      return fetch_specific_stock_chart_data($request['payload']["ticker"],$request["payload"]["startTime"], $request["payload"]["endTime"]);
     case "get_latest_price":
       return delayed_latest_price($request["ticker"]);
     case "FETCH_ALL_TICKERS":
