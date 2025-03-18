@@ -6,6 +6,9 @@ import HomePage from './Pages/HomePage';
 import SearchAllStocks from './Pages/SearchAllStocks';
 import axios from 'axios';
 import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom"; 
+import getBackendURL from "./Utils/backendURL";
+import ChartPage from "./Components/ChartPage";
+import { useParams } from 'react-router-dom';
 
 function App() {
   const [registering, setRegistering] = useState(false);
@@ -19,14 +22,14 @@ function App() {
     const validateSession = async () => {
       try {
         const response = await axios.post(
-          "http://www.sample.com/backend/webserver_backend.php",
+          getBackendURL(),
           { type: "VALIDATE_SESSION" },
           { withCredentials: true }
         );
   
         
           console.log("Session Validation Response:", response.data);
-          if (response.status === 200 && response.data) {
+          if (response.status === 200 && response.data && response.data.valid) {
             console.log("User is logged in!");
             setLoggedIn(true);
             setUserInfo(response.data.user);
@@ -51,7 +54,7 @@ function App() {
   const handleLogout = async () => {
     try {
       await axios.post(
-        "http://www.sample.com/backend/webserver_backend.php",
+        getBackendURL(),
         { type: "LOGOUT" },
         { withCredentials: true }
       );
@@ -97,8 +100,17 @@ function App() {
               )
             } />
               <Route path="/searchallstocks" element={
-                loggedIn ? <SearchAllStocks user={userInfo} handleLogout={handleLogout} /> : <Navigate to="/" replace /> 
+                loggedIn ? <SearchAllStocks user={userInfo} handleLogout={handleLogout} /> : <Navigate to="/"  /> 
               } />
+
+
+
+              <Route path="/chartpage/:Ticker" element={loggedIn ? <ChartPage></ChartPage> : <Navigate to= "/"></Navigate>} />
+
+
+           
+            <Route path="*" element={<Navigate to="/"  />} />
+    
 
           </Routes>
         )}

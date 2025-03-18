@@ -9,6 +9,7 @@ function fetchActiveStocks()
     $batchSize = 10000;
     $filteredStocks = [];
     $exchanges = ["NASDAQ", "NYSE", "AMEX"];
+    // $exchanges = ["NASDAQ"];
 
     echo "Fetching all actively trading stocks from NASDAQ, NYSE & AMEX...\n";
 
