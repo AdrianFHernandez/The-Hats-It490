@@ -63,7 +63,7 @@ foreach ($data as $row) {
 
     // Bind the parameters correctly for each column in the prepared statement
     // 's' for string (ticker), 'i' for integer (timestamp, volume), 'd' for double (open, high, low, close)
-    $stmt->bind_param("siiiidd", $ticker, $timestamp, $open, $high, $low, $close, $volume);
+    $stmt->bind_param("siddddi", $ticker, $timestamp, $open, $high, $low, $close, $volume);
 
     // Execute the prepared statement
     $stmt->execute();
