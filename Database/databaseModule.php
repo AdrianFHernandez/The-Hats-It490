@@ -351,6 +351,49 @@ function doGetStockInfo($sessionId, $ticker)
     return buildResponse("GET_STOCK_INFO_RESPONSE", "SUCCESS", ["data" => $stocks]);
 }
 
+function updateStockHistory() {
+    $db = getDatabaseConnection();
+
+    // Get all unique stocks from Portfolios
+    $query = "SELECT DISTINCT ticker FROM Portfolios";
+    $result = $db->query($query);
+    if (!$result) {
+        die("Error fetching tickers: " . $db->error);
+    }
+
+    $tickers = [];
+    while ($row = $result->fetch_assoc()) {
+        $tickers[] = $row['ticker'];
+    }
+
+    foreach ($tickers as $ticker) {
+        $historyData = fetchStockHistory($ticker);
+
+        if (!empty($historyData)) {
+            $stmt = $db->prepare("INSERT INTO PriceHistory (ticker, timestamp, open, high, low, close, volume) VALUES (?, ?, ?, ?, ?, ?, ?)");
+
+            foreach ($historyData as $data) {
+                $stmt->bind_param("siiiiii", $ticker, $data['timestamp'], $data['open'], $data['high'], $data['low'], $data['close'], $data['volume']);
+                if (!$stmt->execute()) {
+                    echo "Error inserting history for $ticker: " . $stmt->error . "\n";
+                }
+            }
+            $stmt->close();
+        }
+    }
+
+    $db->close();
+    echo "Stock history updated successfully.\n";
+}
+
+function fetchStockHistory($ticker) {
+    // Would replace code with api
+    return [
+        ["timestamp" => time(), "open" => rand(100, 200), "high" => rand(200, 300), "low" => rand(50, 100), "close" => rand(150, 250), "volume" => rand(1000, 5000)]
+    ];
+}
+
+
 function GetStocksBasedOnRisk($sessionId)
 {
     if ($userID = getUserIDfromSession($sessionId) === null) {
