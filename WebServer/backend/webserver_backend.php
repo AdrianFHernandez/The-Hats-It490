@@ -253,7 +253,7 @@ function handleGetStockInfo($data){
     $ticker = $data["ticker"];
     // Send logout request to RabbitMQ
     if (!isset($_COOKIE['PHPSESSID'])) {
-        echo json_encode(["success" => true, "message" => "Session cookie not set"]);
+        echo json_encode(["valid" => false, "message" => "Session cookie not set"]);
         exit();
     }
      
@@ -297,6 +297,7 @@ function handleFetchSpecificStockData( $data ){
     $response = $client->send_request($request);
     if ($response && $response["status"] === "SUCCESS" && $response["type"] === "FETCH_SPECIFIC_STOCK_DATA_RESPONSE") {
         echo json_encode([
+            "message" => $response["payload"]["message"],
             "chartData" => $response["payload"]["data"]
         ]);
     } else {

@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
+import getBackendURL from "../Utils/backendURL";
+import { useNavigate } from 'react-router-dom';
 
 function SearchAllStocks({ user, handleLogout }) {
     const [ticker, setTicker] = useState("");
@@ -7,6 +9,20 @@ function SearchAllStocks({ user, handleLogout }) {
     const [stockData, setStockData] = useState(null);
     const [marketCapRange, setMarketCapRange] = useState([0, 5000]);
     const [searchBy, setSearchBy] = useState("ticker");
+    const navigate = useNavigate();
+   
+
+const handleTickerClick = (Ticker) => {
+  
+  const selectedTicker = Ticker;
+    console.log("Selected Ticker in stocks:", selectedTicker);
+
+  
+  
+
+  
+  navigate(`/chartpage/${selectedTicker}`);
+}
 
  
     // stockData = [
@@ -56,7 +72,7 @@ function SearchAllStocks({ user, handleLogout }) {
             }
 
             const response = await axios.post(
-                "http://www.sample.com/backend/webserver_backend.php",
+                getBackendURL(),
                 requestData,
                 { withCredentials: true }
             );
@@ -153,7 +169,7 @@ function SearchAllStocks({ user, handleLogout }) {
                     <h2>Stock Information:</h2>
                     {stockData.map((stock) => (
                         <div key={stock.ticker} style={{ border: "1px solid #ccc", padding: "10px", margin: "10px 0" }}>
-                            <h3>{stock.ticker} - {stock.name}</h3>
+                            <h3 onClick={() => handleTickerClick(stock.ticker)} >{stock.ticker} - {stock.name}</h3>
                             <p><strong>Market Cap:</strong> ${(stock.marketCap / 1e6).toFixed(2)}M</p>
                             <p><strong>Sector:</strong> {stock.sector}</p>
                             <p><strong>Industry:</strong> {stock.industry}</p>
