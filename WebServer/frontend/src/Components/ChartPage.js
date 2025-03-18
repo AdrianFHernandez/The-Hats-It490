@@ -3,6 +3,8 @@ import { createChart, CrosshairMode, LineStyle, CandlestickSeries } from "lightw
 import { useParams } from 'react-router-dom';
 import axios from "axios";
 import getBackendURL from "../Utils/backendURL";
+import Transaction from "./Transaction";
+import Navbar from "../Components/Navbar"; // Import Navbar
 
 function ChartPage() {
     const { Ticker } = useParams();  
@@ -11,8 +13,8 @@ function ChartPage() {
     const [chartData, setChartData] = useState([]);
     const [candlestickSeries, setCandlestickSeries] = useState(null);
     const [timeframe, setTimeframe] = useState("1m");
-    const [remainingData, setRemainingData] = useState([]);
     const [selectedTicker, setSelectedTicker] = useState(Ticker);
+    const [stockInfo, setStockInfo] = useState(null);
 
     const aggregationIntervals = {
         "1m": 60, "5m": 300, "30m": 1800, "1h": 3600, "1d": 86400
@@ -36,7 +38,15 @@ function ChartPage() {
                 { withCredentials: true }
             );
 
+            if (response.status === 200 && response.data.error) {
+                window.alert(`Polygon doesn't have data for ${selectedTicker}. Choose another stock.`);
+                window.history.back();
+                return;
+            }
+
             if (response.status === 200 && response.data) {
+                console.log("Stock info:", response.data.stockInfo);
+                const stockInfo = response.data.stockInfo;
                 const newData = response.data.chartData.map(item => ({
                     time: item.timestamp,
                     open: parseFloat(item.open),
@@ -47,9 +57,8 @@ function ChartPage() {
                 }));
 
                 newData.sort((a, b) => a.time - b.time);
-
+                setStockInfo(stockInfo);
                 setChartData(newData);
-                setRemainingData(newData);
                 chartRef.current.timeScale().fitContent();
             }
         } catch (error) {
@@ -58,7 +67,7 @@ function ChartPage() {
     };
 
     useEffect(() => {
-        console.log("Selected Tickerss:", Ticker);
+        console.log("Selected Ticker:", Ticker);
         if (!containerRef.current) return;
 
         // Initialize chart only once
@@ -91,7 +100,6 @@ function ChartPage() {
     }, []);
 
     useEffect(() => {
-        // Fetch historical data when selectedTicker changes
         if (selectedTicker) {
             fetchHistoricalData();
         }
@@ -128,18 +136,27 @@ function ChartPage() {
     };
 
     return (
-        <div className="ChartContainer" style={{ width: "95vw", height: "90vh", backgroundColor: "teal", position: "relative", padding: "2rem", display: "flex", flexDirection: "row" }}>
-            <div className="TradingChart" ref={containerRef} style={{ width: "80%", height: "90%", position: "relative" }} />
-            <div style={{ position: "absolute", top: "0px", left: "20px" }}>
-                <select value={timeframe} onChange={e => setTimeframe(e.target.value)} style={{ padding: "5px", fontSize: "14px", borderRadius: "5px", border: "1px solid #ccc", backgroundColor: "#fff", cursor: "pointer" }}>
-                    <option value="1m">1 Minute</option>
-                    <option value="5m">5 Minutes</option>
-                    <option value="30m">30 Minutes</option>
-                    <option value="1h">1 Hour</option>
-                    <option value="1d">Daily</option>
-                </select>
+        <>
+            {/* Navbar Added Here */}
+            <Navbar handleLogout={() => window.location.href = "/"} />
+
+            <div style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
+                <div className="ChartContainer" style={{ width: "95vw", height: "90vh", backgroundColor: "teal", position: "relative", padding: "2rem", display: "flex", flexDirection: "row" }}>
+                    <div className="TradingChart" ref={containerRef} style={{ width: "80%", height: "90%", position: "relative" }} />
+                    <div style={{ position: "absolute", top: "0px", left: "20px" }}>
+                        <select value={timeframe} onChange={e => setTimeframe(e.target.value)} style={{ padding: "5px", fontSize: "14px", borderRadius: "5px", border: "1px solid #ccc", backgroundColor: "#fff", cursor: "pointer" }}>
+                            <option value="1m">1 Minute</option>
+                            <option value="5m">5 Minutes</option>
+                            <option value="30m">30 Minutes</option>
+                            <option value="1h">1 Hour</option>
+                            <option value="1d">Daily</option>
+                        </select>
+                    </div>
+                </div>
+
+                {stockInfo && (<Transaction stockData={stockInfo} chartData={chartData} />)}
             </div>
-        </div>
+        </>
     );
 }
 
