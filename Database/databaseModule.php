@@ -184,7 +184,8 @@ function createSession($userId)
 {
     $conn = dbConnect();
     $sessionId = bin2hex(random_bytes(32)); // Generate a secure session ID
-    $expiresAt = time() + (60 * 5); // 5 minutes expiration
+    // 10 minutes from now it will expire
+    $expiresAt = time() + 600;
 
     $stmt = $conn->prepare("INSERT INTO Sessions (session_id, user_id, expires_at) VALUES (?, ?, ?)");
     $stmt->bind_param("sii", $sessionId, $userId, $expiresAt);
@@ -282,14 +283,14 @@ function doGetAccountInfo($sessionId)
 
     // Step 4: Return response
     return buildResponse("GET_ACCOUNT_INFO_RESPONSE", "SUCCESS", [
-        "user" => [
+        "data" => ["user" => [
             "userStocks" => $userStocks,
             "userBalance" => [
                 "cashBalance" => $cashBalance,
                 "stockBalance" => $stockBalance,
                 "totalBalance" => $totalBalance
             ]
-        ]
+        ]]
     ]);
 }
 
@@ -375,8 +376,8 @@ function GetStocksBasedOnRisk($sessionId)
 }
 
 
-function getUserIDfromSession(string $sessionId){
-    # Connect to database and check if the session is valid, if it is return userID, else return null;
+
+function getUserIDfromSession($sessionId) {
     $conn = dbConnect();
     $stmt = $conn->prepare("SELECT user_id FROM Sessions WHERE session_id = ? AND expires_at > ?");
     $currentTime = time();
@@ -387,7 +388,7 @@ function getUserIDfromSession(string $sessionId){
     if ($stmt->num_rows === 0) {
         $stmt->close();
         $conn->close();
-        return null;
+        return null;  
     }
 
     $stmt->bind_result($userId);
@@ -398,8 +399,48 @@ function getUserIDfromSession(string $sessionId){
 }
 
 
+
+function updateTotalBalance($db, $accountId) {
+    $buyingPower = 0.0;
+    $portfolioValue = 0.0;
+    // Get Buying Power
+    $stmt = $db->prepare("SELECT buying_power FROM Accounts WHERE account_id = ?");
+    $stmt->bind_param("i", $accountId);
+    $stmt->execute();
+    $stmt->bind_result($buyingPower);
+    $stmt->fetch();
+    $stmt->close();
+
+    // Ensure buyingPower has a default value
+    if ($buyingPower === null) {
+        $buyingPower = 0.0; // Default to 0 if no record is found
+    }
+
+    // Get Portfolio Value (SUM(quantity * average_price))
+    $stmt = $db->prepare("SELECT COALESCE(SUM(quantity * average_price), 0) FROM Portfolios WHERE account_id = ?");
+    $stmt->bind_param("i", $accountId);
+    $stmt->execute();
+    $stmt->bind_result($portfolioValue);
+    $stmt->fetch();
+    $stmt->close();
+
+    // Ensure portfolioValue is not null
+    if ($portfolioValue === null) {
+        $portfolioValue = 0.0;
+    }
+
+    // Compute total_balance
+    $totalBalance = $buyingPower + $portfolioValue;
+
+    // Update total_balance in Accounts table
+    $stmt = $db->prepare("UPDATE Accounts SET total_balance = ? WHERE account_id = ?");
+    $stmt->bind_param("di", $totalBalance, $accountId);
+    $stmt->execute();
+    $stmt->close();
+}
+
+
 function performTransaction($sessionId, $ticker, $quantity, $price, $transactionType) {
-    
     if (($userId = getUserIDfromSession($sessionId)) === null) {
         return buildResponse("PERFORM_TRANSACTION_RESPONSE", "FAILED", ["message" => "Invalid or expired session."]);
     }
@@ -417,7 +458,6 @@ function performTransaction($sessionId, $ticker, $quantity, $price, $transaction
         return buildResponse("PERFORM_TRANSACTION_RESPONSE", "FAILED", ["message" => "User has no trading account."]);
     }
 
-    // Step 3: Process Transaction 
     $db->begin_transaction();
     try {
         if ($transactionType === 'BUY') {
@@ -434,14 +474,15 @@ function performTransaction($sessionId, $ticker, $quantity, $price, $transaction
                 throw new Exception("Insufficient buying power.");
             }
 
-            // Deduct buying power
-            $stmt = $db->prepare("UPDATE Accounts SET buying_power = buying_power - ?, total_balance = total_balance - ? WHERE account_id = ?");
-            $stmt->bind_param("ddi", $cost, $cost, $accountId);
+            // Deduct buying power (
+            $stmt = $db->prepare("UPDATE Accounts SET buying_power = buying_power - ? WHERE account_id = ?");
+            $stmt->bind_param("di", $cost, $accountId);
             $stmt->execute();
             $stmt->close();
 
-            // Update Portfolio
-            $stmt = $db->prepare("INSERT INTO Portfolios (account_id, ticker, quantity, average_price) VALUES (?, ?, ?, ?)
+            // Update Portfolio (average price calculation)
+            $stmt = $db->prepare("INSERT INTO Portfolios (account_id, ticker, quantity, average_price) 
+                VALUES (?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE 
                 quantity = quantity + VALUES(quantity), 
                 average_price = ((quantity * average_price) + (VALUES(quantity) * VALUES(average_price))) / (quantity + VALUES(quantity))");
@@ -476,36 +517,116 @@ function performTransaction($sessionId, $ticker, $quantity, $price, $transaction
 
             // Add money to buying power
             $profit = $quantity * $price;
-            $stmt = $db->prepare("UPDATE Accounts SET buying_power = buying_power + ?, total_balance = total_balance + ? WHERE account_id = ?");
-            $stmt->bind_param("ddi", $profit, $profit, $accountId);
+            $stmt = $db->prepare("UPDATE Accounts SET buying_power = buying_power + ? WHERE account_id = ?");
+            $stmt->bind_param("di", $profit, $accountId);
             $stmt->execute();
             $stmt->close();
         }
 
-        $transactionType = strtoupper(trim($transactionType)); // Ensure valid ENUM
+        // Update total_balance after modifying portfolio and buying power
+        updateTotalBalance($db, $accountId);
 
-        if (!in_array($transactionType, ['BUY', 'SELL'])) {
-            return buildResponse("TRANSACTION_RESPONSE", "FAILED", ["message" => "Invalid transaction type"]);
-        }
-        
         $timestamp = time();
-       
         $stmt = $db->prepare("INSERT INTO Transactions (account_id, ticker, quantity, price, transaction_type, timestamp) 
                               VALUES (?, ?, ?, ?, ?, ?)");
         $stmt->bind_param("isidss", $accountId, $ticker, $quantity, $price, $transactionType, $timestamp);
         $stmt->execute();
         $stmt->close();
-        
 
         $db->commit();
         return buildResponse("PERFORM_TRANSACTION_RESPONSE", "SUCCESS", ["message" => "Transaction completed successfully"]);
     } catch (Exception $e) {
         $db->rollback();
-        return buildResponse("PERFORM_TRANSACTION_RESPONSE", "FAILED", ["message" => $e->getMessage() . $transactionType]);
+        return buildResponse("PERFORM_TRANSACTION_RESPONSE", "FAILED", ["message" => $e->getMessage()]);
     } finally {
         $db->close();
     }
 }
+
+function fetchSpecificStockData($sessionId, $ticker, $startTime, $endTime) {
+    // Validate session
+    if (($userId = getUserIDfromSession($sessionId)) === null) {
+        return buildResponse("FETCH_SPECIFIC_STOCK_DATA_RESPONSE", "FAILED", ["message" => "Invalid or expired session."]);
+    }
+
+    //  Ensure `startTime` and `endTime` are converted correctly
+    $startTime = is_numeric($startTime) ? intval($startTime) : strtotime($startTime);
+    $endTime = is_numeric($endTime) ? intval($endTime) : strtotime($endTime);
+
+    //  Ensure `endTime` is later than `startTime`
+    if ($endTime < $startTime) {
+        return buildResponse("FETCH_SPECIFIC_STOCK_DATA_RESPONSE", "FAILED", ["message" => "End time must be later than start time."]);
+    }
+
+    //  Ensure `startTime` is not older than January 1, 2024
+    $minStartTime = strtotime("2024-01-01 00:00:00");
+    if ($startTime < $minStartTime) {
+        $startTime = $minStartTime;
+    }
+
+    //  Ensure `startTime` is within 21 days of `endTime`
+    $maxAllowedStartTime = $endTime - (21 * 24 * 60 * 60); // 21 days before `endTime`
+    if ($startTime < $maxAllowedStartTime) {
+        $startTime = $maxAllowedStartTime;
+    }
+
+    //  Fetch from database
+    $db = dbConnect();
+    $stmt = $db->prepare("SELECT * FROM PriceHistory WHERE ticker = ? AND timestamp BETWEEN ? AND ?");
+    $stmt->bind_param("sii", $ticker, $startTime, $endTime);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $data = $result->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+    $db->close();
+
+    //  Return if data exists in DB
+    if (!empty($data)) {
+        return buildResponse("FETCH_SPECIFIC_STOCK_DATA_RESPONSE", "SUCCESS", ["data" => $data]);
+    }
+
+    //  Fetch from external API if DB has no data
+    $client = getClientForDMZ();
+    $formattedStartTime = date("Y-m-d", $startTime);
+    $formattedEndTime = date("Y-m-d", $endTime);
+    
+    $request = buildRequest("FETCH_SPECIFIC_STOCK_DATA", ["ticker" => $ticker, "startTime" => $formattedStartTime, "endTime" => $formattedEndTime]);
+    $response = $client->send_request($request);
+
+    //  If external API provides data, store it in DB
+    if ($response && $response["status"] === "SUCCESS" && !empty($response["payload"]["data"])) {
+        $db = dbConnect();
+        $stmt = $db->prepare("
+            INSERT INTO PriceHistory (ticker, timestamp, open, high, low, close, volume) 
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE 
+            open = VALUES(open), high = VALUES(high), 
+            low = VALUES(low), close = VALUES(close), volume = VALUES(volume)
+        ");
+
+        foreach ($response["payload"]["data"] as $row) {
+            $ticker = $row["ticker"];
+            $timestamp = intval($row["timestamp"]);
+            $open = floatval($row["open"]);
+            $high = floatval($row["high"]);
+            $low = floatval($row["low"]);
+            $close = floatval($row["close"]);
+            $volume = intval($row["volume"]);
+
+            $stmt->bind_param("siidddi", $ticker, $timestamp, $open, $high, $low, $close, $volume);
+            $stmt->execute();
+        }
+
+        $stmt->close();
+        $db->close();
+
+        return buildResponse("FETCH_SPECIFIC_STOCK_DATA_RESPONSE", "SUCCESS", ["data" => $response["payload"]["data"]]);
+    }
+
+    //  If data is still unavailable
+    return buildResponse("FETCH_SPECIFIC_STOCK_DATA_RESPONSE", "FAILED", ["message" => "Stock data unavailable."]);
+}
+
 
 
 ?>
