@@ -115,8 +115,8 @@ function handleLogin($data) {
         echo json_encode([
             "success" => true,
              "sessionId" => $session_id,
-             "user" => $response['user'],
-             "message" => $response['message']
+             "user" => $response["payload"]['user'],
+             "message" => $response["payload"]['message']
         ]);
     } else {
         echo json_encode(["error" => "Invalid username or password"]);
@@ -208,39 +208,9 @@ function handleGetAccountInfo(){
     
     $response = $client->send_request($request);
 
-    // echo json_encode($response);
+    ob_clean();
     if ($response && $response["status"] === "SUCCESS" && $response["type"] === "GET_ACCOUNT_INFO_RESPONSE") {
-        $payload = $response["payload"];
-        echo json_encode([
-            "userStocks" => $payload['user']['userStocks'],
-            "userCashBalance" => $payload['user']['userBalance']['cashBalance'],
-            "userStockBalance" => $payload['user']['userBalance']['stockBalance'],
-            "userTotalBalance" => $payload['user']['userBalance']['totalBalance'],
-    
-
-    // EXPECTING SOMETHING LIKE THIS:
-    // return response = {
-    //     "user" : {
-    //         "userStocks" : {
-    //             "TSLA": {
-    //                "companyName" : "Tesla",
-    //                "companyDescription": "This company does this ...",
-    //                "count" : 2,
-    //                "averagePrice" : 300
-    //             },
-    //             "VOO" : {
-    //                 "count" : 1,
-    //                 "avergaePrice" : 390
-    //             }
-    //         },
-    //         "userBalance": {
-    //             "cashBalance": 10, 
-    //             "stockBalance": 990,
-    //             "totalBalance" : 1000
-    //         }
-    //     }
-    // }
-        ]);
+        echo json_encode($response["payload"]["data"]);       
     } else {
         echo json_encode(["valid" => false, "error" => "Invalid or expired sesasion"]);
     }
@@ -296,9 +266,10 @@ function handleGetStockInfo($data){
     $response = $client->send_request($request);
     
     if ($response && $response["status"] === "SUCCESS" && $response["type"] === "GET_STOCK_INFO_RESPONSE") {
-        echo json_encode([
+        ob_clean();
+        echo json_encode(
             $response["payload"]["data"]
-        ]);
+        );
     }
     else{
         echo json_encode(["valid" => false, "error" => "Invalid or expired sesasion"]);

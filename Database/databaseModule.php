@@ -283,14 +283,14 @@ function doGetAccountInfo($sessionId)
 
     // Step 4: Return response
     return buildResponse("GET_ACCOUNT_INFO_RESPONSE", "SUCCESS", [
-        "user" => [
+        "data" => ["user" => [
             "userStocks" => $userStocks,
             "userBalance" => [
                 "cashBalance" => $cashBalance,
                 "stockBalance" => $stockBalance,
                 "totalBalance" => $totalBalance
             ]
-        ]
+        ]]
     ]);
 }
 
@@ -376,8 +376,8 @@ function GetStocksBasedOnRisk($sessionId)
 }
 
 
-function getUserIDfromSession(string $sessionId){
-    # Connect to database and check if the session is valid, if it is return userID, else return null;
+
+function getUserIDfromSession($sessionId) {
     $conn = dbConnect();
     $stmt = $conn->prepare("SELECT user_id FROM Sessions WHERE session_id = ? AND expires_at > ?");
     $currentTime = time();
@@ -388,7 +388,7 @@ function getUserIDfromSession(string $sessionId){
     if ($stmt->num_rows === 0) {
         $stmt->close();
         $conn->close();
-        return null;
+        return null;  
     }
 
     $stmt->bind_result($userId);
@@ -397,6 +397,7 @@ function getUserIDfromSession(string $sessionId){
     $conn->close();
     return $userId;
 }
+
 
 
 function updateTotalBalance($db, $accountId) {
