@@ -115,8 +115,8 @@ function handleLogin($data) {
         echo json_encode([
             "success" => true,
              "sessionId" => $session_id,
-             "user" => $response['user'],
-             "message" => $response['message']
+             "user" => $response["payload"]['user'],
+             "message" => $response["payload"]['message']
         ]);
     } else {
         echo json_encode(["error" => "Invalid username or password"]);
@@ -208,7 +208,7 @@ function handleGetAccountInfo(){
     
     $response = $client->send_request($request);
 
-    // echo json_encode($response);
+    ob_clean();
     if ($response && $response["status"] === "SUCCESS" && $response["type"] === "GET_ACCOUNT_INFO_RESPONSE") {
         $payload = $response["payload"];
         echo json_encode($payload["data"]);
@@ -273,42 +273,27 @@ function handlePerformTransaction($data){
         echo json_encode(["error" => $response["payload"]["message"] ?? "Transaction failed"]);
     }
 
-   
+
     
 }
 function handleGetStockInfo($data){
+    $ticker = $data["ticker"];
     // Send logout request to RabbitMQ
     if (!isset($_COOKIE['PHPSESSID'])) {
         echo json_encode(["success" => true, "message" => "Session cookie not set2"]);
         exit();
     }
-    
-    $ticker = $data['ticker'] ?? '';
-    $marketCapMin = $data['marketCapMin'] ?? '';
-    $marketCapMax = $data['marketCapMax'] ?? '';
-
-    
+     
     $client = get_client();
-
-    $request = null;
-
-    if ($ticker){
-        $request = buildRequest('GET_STOCK_INFO', [
-            'sessionId' => $_COOKIE['PHPSESSID'],
-            'ticker' => $ticker
-        ]);
-    }
-    else{
-        $request = buildRequest('GET_STOCK_INFO', [
-            'sessionId' => $_COOKIE['PHPSESSID'],
-            'marketCapMin' => $marketCapMin,
-            'marketCapMax' => $marketCapMax
-        ]);
-    }
+    $request = buildRequest('GET_STOCK_INFO', [
+        'sessionId' => $_COOKIE['PHPSESSID'],
+        'ticker' => $ticker
+    ]);
     
     $response = $client->send_request($request);
     
     if ($response && $response["status"] === "SUCCESS" && $response["type"] === "GET_STOCK_INFO_RESPONSE") {
+        ob_clean();
         echo json_encode(
             $response["payload"]["data"]
         );
@@ -319,6 +304,34 @@ function handleGetStockInfo($data){
 
 
 }
+
+function handleFetchSpecificStockData( $data ){
+    $ticker = $data["ticker"] ?? '';
+    $start = $data["startTime"] ?? '';
+    $end = $data["endTime"] ?? '';
+    if (!$ticker || !$start || !$end) {
+        echo json_encode(["error" => "Invalid request"]);
+        exit();
+    }
+    $client = get_client();
+    $request = buildRequest('FETCH_SPECIFIC_STOCK_DATA', [
+        'sessionId' => $_COOKIE['PHPSESSID'],
+        'ticker' => $ticker,
+        'start' => $start,
+        'end' => $end
+    ]);
+
+    $response = $client->send_request($request);
+    if ($response && $response["status"] === "SUCCESS" && $response["type"] === "FETCH_SPECIFIC_STOCK_DATA_RESPONSE") {
+        echo json_encode([
+            "chartData" => $response["payload"]["data"]
+        ]);
+    } else {
+        echo json_encode(["error" => "Failed to fetch stock data"]);
+    }
+
+}
+
 
 function handleGetStocksBasedOnRisk($data){
     
@@ -348,11 +361,15 @@ switch ($data['type']) {
     case 'GET_STOCKS_BASED_ON_RISK':
         handleGetStocksBasedOnRisk($data);
         break;
+    case 'FETCH_SPECIFIC_STOCK_DATA':
+        handleFetchSpecificStockData($data);
+        break;
     case 'PERFORM_TRANSACTION':
         handlePerformTransaction($data);
         break;
+
     default:
-        echo json_encode(["error" => "Unknown request type"]);
+        echo json_encode(["error" => "Unknown request type --"]);
         break;
 }
 ?>
