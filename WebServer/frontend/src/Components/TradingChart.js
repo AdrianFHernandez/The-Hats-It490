@@ -30,7 +30,7 @@ function TradingChart({Ticker}) {
         if (response.status === 200 && response.data) {
             console.log("Transaction successful:", response.data);
             // Update user account with new transaction data
-            // setUserAccount(response.data);
+            setUserAccount(response.data);
         }
         
 
@@ -292,12 +292,7 @@ function TradingChart({Ticker}) {
     return () => clearInterval(updateInterval);
   }, [candlestickSeries, remainingData]);
 
-  // Handle ticker selection from the Portfolio component
-  const handleTickerSelect = (ticker) => {
-    if (ticker === selectedTicker) return;
-    console.log(`Switching to ticker: ${ticker}`);
-    setSelectedTicker(ticker);
-  };
+
 
   return (
     <div className="ChartContainer" style={{ width: "95vw", height: "90vh", backgroundColor: "teal", position: "relative", padding: "2rem", display: "flex", flexDirection: "row" }}>
@@ -327,12 +322,12 @@ function TradingChart({Ticker}) {
       </div>
 
       <div style={{ display:"flex", flexDirection:"column", justifyContent:"center", alignItems:"center" }}>
-        {userAccount && (
+        {/* {userAccount && (
           <Portfolio 
             userAccount={userAccount} 
             onSelectTicker={handleTickerSelect} // Callback for dynamic ticker switching
           />
-        )}
+        )} */}
         <Transaction 
           stockData={stockData} 
           chartData={chartData} 
