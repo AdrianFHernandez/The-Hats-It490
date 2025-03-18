@@ -40,7 +40,9 @@ function requestProcessor($request)
             return GetStocksBasedOnRisk($request["payload"]['sessionId'] );
         case "PERFORM_TRANSACTION":
             return performTransaction($request["payload"]['sessionId'], $request["payload"]['ticker'], $request["payload"]['quantity'], $request["payload"]['price'], $request["payload"]['type']);
-        default:
+        case "FETCH_SPECIFIC_STOCK_DATA":
+            return fetchSpecificStockData($request["payload"]['sessionId'], $request["payload"]['ticker'], $request["payload"]['start'], $request["payload"]['end']);
+            default:
             return buildResponse("ERROR", "FAILED", ["message" => "Invalid request type"]);
     }
 }
