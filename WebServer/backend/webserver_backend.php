@@ -107,9 +107,9 @@ function handleLogin($data) {
             "expires" => $session_expires,
             "path" => "/",
             "domain" => "www.sample.com",
-            "secure" => true, // change to false for http testing
+            "secure" => false, // change to false for http testing
             "httponly" => true,
-            "samesite" => "None" // lax
+            "samesite" => "lax" // lax
         ]);
 
         echo json_encode([
