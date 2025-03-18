@@ -17,7 +17,7 @@ function ChartPage() {
     const [stockInfo, setStockInfo] = useState(null);
 
     const aggregationIntervals = {
-        "1m": 60, "5m": 300, "30m": 1800, "1h": 3600, "1d": 86400
+        "1m": 60, "5m": 300, "30m": 1800, "1h": 3600, "4h": 14400
     };
 
     const fetchHistoricalData = async () => {
@@ -45,7 +45,7 @@ function ChartPage() {
             }
 
             if (response.status === 200 && response.data) {
-                console.log("Stock info:", response.data.stockInfo);
+                console.log("Stock info:", response.data.chartData);
                 const stockInfo = response.data.stockInfo;
                 const newData = response.data.chartData.map(item => ({
                     time: item.timestamp,
@@ -149,7 +149,7 @@ function ChartPage() {
                             <option value="5m">5 Minutes</option>
                             <option value="30m">30 Minutes</option>
                             <option value="1h">1 Hour</option>
-                            <option value="1d">Daily</option>
+                            <option value="4h">4 Hour</option>
                         </select>
                     </div>
                 </div>
