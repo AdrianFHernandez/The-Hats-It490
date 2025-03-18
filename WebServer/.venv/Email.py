@@ -5,11 +5,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 sendgrid_api=os.getenv("SENDGRID_API_KEY")
+#"490hatsit@gmail.com"
 
 def send_email(to, subject, content):
     sg = sendgrid.SendGridAPIClient(sendgrid_api)
     email = Mail(
-        from_email=("490hatsit@gmail.com", "Stock Site"),
+        from_email=("afh23@njit.com", "Stock Site"),
         to_emails=to,
         subject=subject,
         plain_text_content=content
