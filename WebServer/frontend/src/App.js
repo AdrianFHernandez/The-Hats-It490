@@ -29,7 +29,7 @@ function App() {
   
         
           console.log("Session Validation Response:", response.data);
-          if (response.status === 200 && response.data) {
+          if (response.status === 200 && response.data && response.data.valid) {
             console.log("User is logged in!");
             setLoggedIn(true);
             setUserInfo(response.data.user);
@@ -105,7 +105,7 @@ function App() {
 
 
 
-<Route path="/chartpage/:Ticker" element={loggedIn ? <ChartPage></ChartPage> : <Navigate to= "/"></Navigate>} />
+              <Route path="/chartpage/:Ticker" element={loggedIn ? <ChartPage></ChartPage> : <Navigate to= "/"></Navigate>} />
 
 
            
