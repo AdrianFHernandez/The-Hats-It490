@@ -28,7 +28,7 @@ $type = $data['type'] ?? '';
 // Check if username and password are set
 if ($username && $password) {
     // Send the username and password to the RabbitMQ server
-    $client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
+    $client = new rabbitMQClient("HatsRabbitMQ.ini", "Server");
     $request = array();
     $request['type'] = $type;
     $request['username'] = $username;

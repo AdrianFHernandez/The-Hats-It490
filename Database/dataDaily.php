@@ -46,7 +46,7 @@ function updateLocalStockData() {
             "start" => $lastTimestamp,
             "end" => $currentTimestamp
         ];
-        $client = new rabbitMQClient("testRabbitMQ.ini","testServer");
+        $client = new rabbitMQClient("HatsRabbitMQ.ini","Server");
         $response = $client->send_request($request);
 
         if ($response && isset($response['data'])) {

@@ -28,7 +28,7 @@ function requestProcessor($request)
   return buildResponse("ERROR", "FAILED", ["message" => "Request type not supported"]);
 }
 
-$server = new rabbitMQServer("testRabbitMQ.ini","testServer");
+$server = new rabbitMQServer("HatsDMZRabbitMQ.ini","Server");
 
 echo "DataSource Processor BEGIN".PHP_EOL;
 $server->process_requests('requestProcessor');

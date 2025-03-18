@@ -19,7 +19,7 @@ function LoginPage() {
         { type: "LOGIN", username, password },
         { withCredentials: true } // Send cookies
       );
-
+      console.log(username, password);
       console.log(JSON.stringify(response.data));
       window.alert("Login Response:", JSON.stringify(response.data));
 

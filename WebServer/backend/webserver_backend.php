@@ -304,7 +304,7 @@ switch ($data['type']) {
         handleGetStocksBasedOnRisk($data);
         break;
     default:
-        echo json_encode(["error" => "Unknown request type"]);
+        echo json_encode(["error" => "test if error"]);
         break;
 }
 ?>
