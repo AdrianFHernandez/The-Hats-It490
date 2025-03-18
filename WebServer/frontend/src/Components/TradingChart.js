@@ -1,365 +1,191 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState} from "react";
 import { createChart, CrosshairMode, LineStyle, CandlestickSeries } from "lightweight-charts";
 import Transaction from "./Transaction";
 import Portfolio from "./Portfolio";
 import axios from "axios";
+import getBackendURL from "../Utils/backendURL";
 
-function TradingChart({Ticker}) {
-  const containerRef = useRef(null);
-  const chartRef = useRef(null);
-  const [chartData, setChartData] = useState([]);
-  const [candlestickSeries, setCandlestickSeries] = useState(null);
-  const [series, setSeries] = useState(null);
-  const [userAccount, setUserAccount] = useState(null);
-  const [timeframe, setTimeframe] = useState("1m"); // Default timeframe
-  const [remainingData, setRemainingData] = useState([]); // Future (delayed) data waiting in the wings
-  const [fetchingMoreData, setFetchingMoreData] = useState(false);
-  const [selectedTicker, setSelectedTicker] = useState(Ticker); // Default ticker
-  
-  
+function TradingChart({ Ticker }) {
+    const containerRef = useRef(null);
+    const chartRef = useRef(null);
+    const [chartData, setChartData] = useState([]);
+    const [candlestickSeries, setCandlestickSeries] = useState(null);
+    const [userAccount, setUserAccount] = useState(null);
+    const [timeframe, setTimeframe] = useState("1m");
+    const [remainingData, setRemainingData] = useState([]);
+    const [fetchingMoreData, setFetchingMoreData] = useState(false);
+    const [selectedTicker, setSelectedTicker] = useState(Ticker);
+    const [startTime, setStartTime] = useState(null);
+    const [endTime, setEndTime] = useState(null);
 
-  const handleTransaction = async (transactionType, price, quantity) => {
-    try {
-        const response = await axios.post(
-            "http://www.sample.com/backend/webserver_backend.php",
-            { type: "PERFORM_TRANSACTION", ticker: selectedTicker, transactionType: transactionType, price: price, quantity: quantity },
-            { withCredentials: true }
-        );
+    const delaySeconds = 86400; // Delay in displaying data, not fetching
+    const aggregationIntervals = {
+        "1m": 60, "5m": 300, "30m": 1800, "1h": 3600, "1d": 86400
+    };
 
-        console.log("Transaction Response:", response);
-        if (response.status === 200 && response.data) {
-            console.log("Transaction successful:", response.data);
-            // Update user account with new transaction data
-            // setUserAccount(response.data);
-        }
-        
+    const convertUtcToLocal = (utcTimestamp) => Math.floor(new Date(utcTimestamp * 1000).getTime() / 1000);
 
-    } catch (error) {
-        console.error("Error connecting to server:", error);
-      
-    }
-};
+    const aggregateData = (data, timeframe) => {
+        const interval = aggregationIntervals[timeframe];
+        const aggregated = [];
+        let currentCandle = null;
 
-  const stockData={ticker:"TSLA", name: "Tesla" , marketCap: 12912759190.3, description:"Tesla stock (TSLA) is a stock that represents ownership in Tesla, Inc., a company that designs, manufactures, and sells electric vehicles and energy storage systems.", sector:"Consumer Discretionary"}
-  // Define your delay in seconds (24 hours = 86400 seconds)
-  const delaySeconds = 86400;
+        data.forEach(item => {
+            const timestamp = Math.floor(item.time / interval) * interval;
+            if (!currentCandle || currentCandle.time !== timestamp) {
+                if (currentCandle) aggregated.push(currentCandle);
+                currentCandle = { time: timestamp, open: item.open, high: item.high, low: item.low, close: item.close, volume: item.volume };
+            } else {
+                currentCandle.high = Math.max(currentCandle.high, item.high);
+                currentCandle.low = Math.min(currentCandle.low, item.low);
+                currentCandle.close = item.close;
+                currentCandle.volume += item.volume;
+            }
+        });
 
-  const chartOptions = {
-    layout: { attributionLogo: false },
-    crosshair: {
-      mode: CrosshairMode.Normal,
-      vertLine: {
-        width: 2,
-        color: "#C3BCDB44",
-        style: LineStyle.Solid,
-        labelBackgroundColor: "#FFFFFF",
-      },
-    },
-    timeScale: {
-      timeVisible: true,
-      secondsVisible: false,
-      rightOffset: 5,
-      fixLeftEdge: false,
-      fixRightEdge: false,
-      borderVisible: false,
-    },
-  };
-
-  const aggregationIntervals = {
-    "1m": 60,      // 1 minute
-    "5m": 300,     // 5 minutes
-    "30m": 1800,   // 30 minutes
-    "1h": 3600,    // 1 hour
-    "1d": 86400,   // 1 day
-  };
-
-  const convertUtcToLocal = (utcTimestamp) => {
-    return Math.floor(new Date(utcTimestamp * 1000).getTime() / 1000);
-  };
-
-  const aggregateData = (data, timeframe) => {
-    const interval = aggregationIntervals[timeframe];
-    const aggregated = [];
-    let currentCandle = null;
-
-    data.forEach(item => {
-      const timestamp = Math.floor(item.time / interval) * interval; // Normalize time
-
-      if (!currentCandle || currentCandle.time !== timestamp) {
         if (currentCandle) aggregated.push(currentCandle);
-        currentCandle = {
-          time: timestamp,
-          open: item.open,
-          high: item.high,
-          low: item.low,
-          close: item.close,
-          volume: item.volume,
-        };
-      } else {
-        currentCandle.high = Math.max(currentCandle.high, item.high);
-        currentCandle.low = Math.min(currentCandle.low, item.low);
-        currentCandle.close = item.close;
-        currentCandle.volume += item.volume;
-      }
-    });
+        return aggregated;
+    };
 
-    if (currentCandle) aggregated.push(currentCandle);
-    return aggregated;
-  };
-
-  const fetchMoreHistoricalData = async (oldestTimestamp) => {
-    if (fetchingMoreData) return;
-    setFetchingMoreData(true);
-  
-    try {
-      console.log("Fetching more data before:", new Date(oldestTimestamp * 1000));
-  
-      // Fetch more historical data for the selected ticker
-      const response = await fetch(`/Meta2.json?ticker=${selectedTicker}&before=${oldestTimestamp}`);
-      const data = await response.json();
-      
-      if (data.length === 0) {
-        console.log("No more historical data available.");
-        setFetchingMoreData(false);
-        return;
-      }
-  
-      let newData = data.map(item => ({
-        time: convertUtcToLocal(Math.floor(new Date(item.t).getTime() / 1000)),
-        open: item.o,
-        high: item.h,
-        low: item.l,
-        close: item.c,
-        volume: item.v || 0,
-      }));
-  
-      // Ensure newData is sorted in ascending order before merging
-      newData.sort((a, b) => a.time - b.time);
-  
-      // Merge old and new data, ensuring the final dataset remains sorted
-      setChartData(prevData => {
-        const mergedData = [...newData, ...prevData].sort((a, b) => a.time - b.time);
-        console.log("Merged Data First Entry:", mergedData[0]);
-        console.log("Merged Data Last Entry:", mergedData[mergedData.length - 1]);
-        return mergedData;
-      });
-  
-      setFetchingMoreData(false);
-    } catch (error) {
-      console.error("Error fetching more historical data:", error);
-      setFetchingMoreData(false);
-    }
-  };
-
-  // Dummy user account rn
-  useEffect(() => {
-    setUserAccount({
-      "userStocks" : {
-        "TSLA": {
-          "companyName" : "Tesla",
-          "companyDescription": "This company does this ...",
-          "count" : 2,
-          "averagePrice" : 300
-        },
-        "VOO" : {
-          "companyName" : "Vanguard",
-          "count" : 1,
-          "averagePrice" : 390
-        }
-      },
-      "userBalance": {
-        "buyingPower": 10, 
-        "stockBalance": 990, 
-        "totalBalance" : 1000
-      }
-    });
-  }, []);
-
-  useEffect(() => {
-    const fetchData = async () => {
+    const fetchHistoricalData = async (newStartTime = null, newEndTime = null) => {
         if (!selectedTicker) return;
 
         try {
-            setChartData([]); 
-            setRemainingData([]);
+            setFetchingMoreData(true);
 
-            const endTime = new Date();
-            const startTime = new Date();
-            startTime.setDate(endTime.getDate() - 21);
+            const today = new Date();
+            const finalEndTime = newEndTime || today;
+            const finalStartTime = newStartTime || new Date(finalEndTime);
+            finalStartTime.setDate(finalEndTime.getDate() - 5);
 
-            const formattedStart = startTime.toISOString().split("T")[0];
-            const formattedEnd = endTime.toISOString().split("T")[0];
+            setStartTime(finalStartTime);
+            setEndTime(finalEndTime);
 
-            console.log(`Fetching data for ${selectedTicker} from ${formattedStart} to ${formattedEnd}`);
+            const formattedStart = finalStartTime.toISOString().split("T")[0];
+            const formattedEnd = finalEndTime.toISOString().split("T")[0];
+
+            console.log(`Fetching historical data for ${selectedTicker} from ${formattedStart} to ${formattedEnd}`);
 
             const response = await axios.post(
-                "http://www.sample.com/backend/webserver_backend.php",
+                getBackendURL(),
                 { type: "FETCH_SPECIFIC_STOCK_DATA", ticker: selectedTicker, startTime: formattedStart, endTime: formattedEnd },
                 { withCredentials: true }
             );
 
             if (response.status === 200 && response.data) {
-                console.log("Stock Data:", response.data);
-
-                const formattedData = response.data.chartData.map(item => ({
-                    time: item.timestamp, // Keep UNIX timestamp format
-                    open: parseFloat(item.open), 
+                console.log("Fetched historical data:", response.data);
+                let newData = response.data.chartData.map(item => ({
+                    time: item.timestamp,
+                    open: parseFloat(item.open),
                     high: parseFloat(item.high),
                     low: parseFloat(item.low),
                     close: parseFloat(item.close),
                     volume: item.volume ? parseInt(item.volume, 10) : 0
                 }));
 
-                const nowLocal = Math.floor(Date.now() / 1000);
-                const latestAllowedTime = nowLocal - delaySeconds;
-                
-                const pastData = formattedData.filter(item => item.time <= latestAllowedTime);
-                const futureData = formattedData.filter(item => item.time > latestAllowedTime);
-                
-                setChartData(pastData);
-                setRemainingData(futureData);
-            
+                newData.sort((a, b) => a.time - b.time);
+
+                if (newStartTime) {
+                    setChartData(prevData => [...newData, ...prevData]);
+                } else {
+                    setChartData(newData);
+                }
+
+                setRemainingData(newData);
                 chartRef.current.timeScale().fitContent();
-                
-                
             }
         } catch (error) {
-            console.error("Error fetching data:", error);
+            console.error("Error fetching historical data:", error);
+        } finally {
+            setFetchingMoreData(false);
         }
     };
 
-    fetchData();
-}, [selectedTicker]);
+    useEffect(() => {
+        fetchHistoricalData();
 
+    }, [selectedTicker]);
 
-  // Listen for changes in the visible range to fetch more historical data
-  useEffect(() => {
-    if (!chartRef.current) return;
-    const chart = chartRef.current;
-    const timeScale = chart.timeScale();
+    useEffect(() => {
+        if (!candlestickSeries || remainingData.length === 0) return;
 
-    const handleVisibleRangeChange = () => {
-      const visibleRange = timeScale.getVisibleRange();
-      if (!visibleRange) return;
+        const updateInterval = setInterval(() => {
+            const nowLocal = Math.floor(Date.now() / 1000);
+            const simulatedTime = nowLocal - delaySeconds; // Displaying data as if it were "live"
 
-      const oldestTimestamp = chartData[0]?.time;
-      const totalRange = visibleRange.to - visibleRange.from;
-      const remainingTime = visibleRange.from - oldestTimestamp;
+            if (remainingData.length > 0 && remainingData[0].time <= simulatedTime) {
+                const nextData = remainingData.shift();
+                setRemainingData([...remainingData]);
+                console.log("Simulated real-time update:", nextData);
+                candlestickSeries.update(nextData);
+                setChartData(prevData => [...prevData, nextData]);
+            }
+        }, 60000); // Update every minute
 
-      if (remainingTime / totalRange < 0.05 && oldestTimestamp > new Date("2025-01-12").getTime() / 1000) {
-        fetchMoreHistoricalData(oldestTimestamp);
-      }
-    };
+        return () => clearInterval(updateInterval);
+    }, [candlestickSeries, remainingData]);
 
-    timeScale.subscribeVisibleTimeRangeChange(handleVisibleRangeChange);
-
-    return () => {
-      timeScale.unsubscribeVisibleTimeRangeChange(handleVisibleRangeChange);
-    };
-  }, [chartData, selectedTicker]);
-
-  // Initialize the chart on mount
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const container = containerRef.current;
-    
-    const chart = createChart(container, {
-      width: container.clientWidth,
-      height: container.clientHeight,
-    });
-    chart.applyOptions(chartOptions);
-
-    const seriesInstance = chart.addSeries(CandlestickSeries, {
-      upColor: "#26a69a",
-      downColor: "#ef5350",
-      borderVisible: false,
-      wickUpColor: "#26a69a",
-      wickDownColor: "#ef5350",
-    });
-    
-    chartRef.current = chart;
-    setCandlestickSeries(seriesInstance);
-    setSeries(seriesInstance);
-  }, []);
-
-  // Update chart data when timeframe or chartData changes
-  useEffect(() => {
-    if (!candlestickSeries || chartData.length === 0) return;
-    console.log(`Updating Chart for Timeframe: ${timeframe}`);
-    const aggregatedData = aggregateData(chartData, timeframe);
-    candlestickSeries.setData(aggregatedData);
-  }, [timeframe, chartData, candlestickSeries]);
-
-  // Update the chart with new delayed data based on local time
-  useEffect(() => {
-    if (!candlestickSeries || remainingData.length === 0) return;
-
-    const updateInterval = setInterval(() => {
-      const nowLocal = Math.floor(Date.now() / 1000);
-      
-      // If the first item in the future data is now "due"
-      if (remainingData.length > 0 && remainingData[0].time <= nowLocal - delaySeconds) {
-        const nextData = remainingData.shift();
-        setRemainingData([...remainingData]);
+    useEffect(() => {
+        if (!containerRef.current) return;
+        const container = containerRef.current;
         
-        console.log("Updating chart with new data:", nextData);
-        candlestickSeries.update(nextData);
-        setChartData(prevData => [...prevData, nextData]);
-      }
-    }, 1000); // Check every minute
+        const chart = createChart(container, {
+            width: container.clientWidth,
+            height: container.clientHeight,
+        });
 
-    return () => clearInterval(updateInterval);
-  }, [candlestickSeries, remainingData]);
+        chart.applyOptions({
+            layout: { attributionLogo: false },
+            crosshair: {
+                mode: CrosshairMode.Normal,
+                vertLine: { width: 2, color: "#C3BCDB44", style: LineStyle.Solid, labelBackgroundColor: "#FFFFFF" },
+            },
+            timeScale: { timeVisible: true, secondsVisible: false, rightOffset: 5 },
+        });
 
-  // Handle ticker selection from the Portfolio component
-  const handleTickerSelect = (ticker) => {
-    if (ticker === selectedTicker) return;
-    console.log(`Switching to ticker: ${ticker}`);
-    setSelectedTicker(ticker);
-  };
+        const seriesInstance = chart.addSeries(CandlestickSeries, {
+          upColor: "#26a69a",
+          downColor: "#ef5350",
+          borderVisible: false,
+          wickUpColor: "#26a69a",
+          wickDownColor: "#ef5350",
+        });
 
-  return (
-    <div className="ChartContainer" style={{ width: "95vw", height: "90vh", backgroundColor: "teal", position: "relative", padding: "2rem", display: "flex", flexDirection: "row" }}>
-      {/* Chart Container */}
-      <div className="TradingChart" id="mainChart" ref={containerRef} style={{ width: "80%", height: "90%", position: "relative" }} />
+        chartRef.current = chart;
+        setCandlestickSeries(seriesInstance);
+    }, []);
 
-      {/* Timeframe Selector */}
-      <div style={{ position: "absolute", top: "0px", left: "20px" }}>
-        <select
-          value={timeframe}
-          onChange={e => setTimeframe(e.target.value)}
-          style={{
-            padding: "5px",
-            fontSize: "14px",
-            borderRadius: "5px",
-            border: "1px solid #ccc",
-            backgroundColor: "#fff",
-            cursor: "pointer",
-          }}
-        >
-          <option value="1m">1 Minute</option>
-          <option value="5m">5 Minutes</option>
-          <option value="30m">30 Minutes</option>
-          <option value="1h">1 Hour</option>
-          <option value="1d">Daily</option>
-        </select>
-      </div>
+    useEffect(() => {
+        if (!candlestickSeries || chartData.length === 0) return;
+        const aggregatedData = aggregateData(chartData, timeframe);
+        candlestickSeries.setData(aggregatedData);
+    }, [timeframe, chartData, candlestickSeries]);
 
-      <div style={{ display:"flex", flexDirection:"column", justifyContent:"center", alignItems:"center" }}>
-        {userAccount && (
-          <Portfolio 
-            userAccount={userAccount} 
-            onSelectTicker={handleTickerSelect} // Callback for dynamic ticker switching
-          />
-        )}
-        <Transaction 
-          stockData={stockData} 
-          chartData={chartData} 
-          onTransaction={handleTransaction}
-        />
-      </div>
-    </div>
-  );
+    const handleTickerSelect = (ticker) => {
+        if (ticker === selectedTicker) return;
+        console.log(`Switching to ticker: ${ticker}`);
+        setSelectedTicker(ticker);
+    };
+
+    return (
+        <div className="ChartContainer" style={{ width: "95vw", height: "90vh", backgroundColor: "teal", position: "relative", padding: "2rem", display: "flex", flexDirection: "row" }}>
+            <div className="TradingChart" ref={containerRef} style={{ width: "80%", height: "90%", position: "relative" }} />
+            <div style={{ position: "absolute", top: "0px", left: "20px" }}>
+                <select value={timeframe} onChange={e => setTimeframe(e.target.value)} style={{ padding: "5px", fontSize: "14px", borderRadius: "5px", border: "1px solid #ccc", backgroundColor: "#fff", cursor: "pointer" }}>
+                    <option value="1m">1 Minute</option>
+                    <option value="5m">5 Minutes</option>
+                    <option value="30m">30 Minutes</option>
+                    <option value="1h">1 Hour</option>
+                    <option value="1d">Daily</option>
+                </select>
+            </div>
+
+            <div style={{ display:"flex", flexDirection:"column", justifyContent:"center", alignItems:"center" }}>
+                {/* {userAccount && <Portfolio userAccount={userAccount} onSelectTicker={handleTickerSelect} />} */}
+                {/* <Transaction stockData={{ ticker: selectedTicker }} chartData={chartData} /> */}
+            </div>
+        </div>
+    );
 }
 
 export default TradingChart;

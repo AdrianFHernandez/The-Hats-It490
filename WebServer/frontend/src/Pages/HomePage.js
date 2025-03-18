@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import TradingChart from "../Components/TradingChart";
+import getBackendURL from "../Utils/backendURL";
 
 function HomePage({ user, handleLogout }) {
   // State variables
@@ -14,7 +15,7 @@ function HomePage({ user, handleLogout }) {
     const getUserInfo = async () => {
       try {
         const response = await axios.post(
-          "http://www.sample.com/backend/webserver_backend.php",
+          getBackendURL(),
           { type: "GET_ACCOUNT_INFO" },
           { withCredentials: true } // Send cookies for session authentication
         );
@@ -61,7 +62,7 @@ function HomePage({ user, handleLogout }) {
           <h3>Logged in as: {user.username}</h3>
 
           <button onClick={handleLogout}>Logout</button>
-          <TradingChart Ticker={"TSLA"} />
+          {/* <TradingChart Ticker={"TSLA"} /> */}
 
           {haveUserBalance ? (
             <h2>Your current balance is: {userBalance?.totalBalance || "N/A"}</h2>

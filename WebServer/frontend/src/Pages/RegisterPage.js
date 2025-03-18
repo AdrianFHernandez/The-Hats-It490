@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios"
+import getBackendURL from "../Utils/backendURL";
 
 function RegisterPage(props) {
     const [name, setName] = useState("");
@@ -84,7 +85,7 @@ function RegisterPage(props) {
             console.log("Sending request to backend...", userData);
             
             // Step 3: Send data to PHP backend for RabbitMQ processing
-            const response = await axios.post("http://www.sample.com/backend/webserver_backend.php", 
+            const response = await axios.post(getBackendURL() , 
                 userData, { withCredentials: true }
             );
             
