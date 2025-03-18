@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
+import getBackendURL from "../Utils/backendURL";
 
 function LoginPage() {
   const [username, setUsername] = useState("");
@@ -15,7 +16,7 @@ function LoginPage() {
 
     try {
       const response = await axios.post(
-        "http://www.sample.com/backend/webserver_backend.php",
+        getBackendURL(),
         { type: "LOGIN", username, password },
         { withCredentials: true } // Send cookies
       );

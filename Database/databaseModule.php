@@ -570,19 +570,31 @@ function fetchSpecificStockData($sessionId, $ticker, $startTime, $endTime) {
         $startTime = $maxAllowedStartTime;
     }
 
-    //  Fetch from database
+    // Connect to the database once
     $db = dbConnect();
+
+    // Fetch data from PriceHistory
     $stmt = $db->prepare("SELECT * FROM PriceHistory WHERE ticker = ? AND timestamp BETWEEN ? AND ?");
     $stmt->bind_param("sii", $ticker, $startTime, $endTime);
     $stmt->execute();
     $result = $stmt->get_result();
-    $data = $result->fetch_all(MYSQLI_ASSOC);
+    $data = $result->fetch_all(MYSQLI_ASSOC);  // Fetch all rows for PriceHistory
     $stmt->close();
+
+    // Fetch data from Stocks
+    $stmt = $db->prepare("SELECT * FROM Stocks WHERE ticker = ?");
+    $stmt->bind_param("s", $ticker);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $dataStock = $result->fetch_assoc();  // Fetch single row for Stocks
+    $stmt->close();
+
+    // Close the database connection once
     $db->close();
 
     //  Return if data exists in DB
     if (!empty($data)) {
-        return buildResponse("FETCH_SPECIFIC_STOCK_DATA_RESPONSE", "SUCCESS", ["data" => $data]);
+        return buildResponse("FETCH_SPECIFIC_STOCK_DATA_RESPONSE", "SUCCESS", ["data" => ["stockData" => $data, "stockInfo" => $dataStock], "message" => "Stock data fetched from database."]);
     }
 
     //  Fetch from external API if DB has no data
@@ -595,32 +607,36 @@ function fetchSpecificStockData($sessionId, $ticker, $startTime, $endTime) {
 
     //  If external API provides data, store it in DB
     if ($response && $response["status"] === "SUCCESS" && !empty($response["payload"]["data"])) {
-        $db = dbConnect();
-        $stmt = $db->prepare("
-            INSERT INTO PriceHistory (ticker, timestamp, open, high, low, close, volume) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE 
-            open = VALUES(open), high = VALUES(high), 
-            low = VALUES(low), close = VALUES(close), volume = VALUES(volume)
-        ");
+        // $db = dbConnect();
+        // $stmt = $db->prepare("
+        //     INSERT INTO PriceHistory (ticker, timestamp, open, high, low, close, volume) 
+        //     VALUES (?, ?, ?, ?, ?, ?, ?)
+        //     ON DUPLICATE KEY UPDATE 
+        //     open = VALUES(open), high = VALUES(high), 
+        //     low = VALUES(low), close = VALUES(close), volume = VALUES(volume)
+        // ");
 
-        foreach ($response["payload"]["data"] as $row) {
-            $ticker = $row["ticker"];
-            $timestamp = intval($row["timestamp"]);
-            $open = floatval($row["open"]);
-            $high = floatval($row["high"]);
-            $low = floatval($row["low"]);
-            $close = floatval($row["close"]);
-            $volume = intval($row["volume"]);
+        // foreach ($response["payload"]["data"] as $row) {
+        //     $ticker = $row["ticker"];
+        //     $timestamp = intval($row["timestamp"]);
+        //     $open = floatval($row["open"]);
+        //     $high = floatval($row["high"]);
+        //     $low = floatval($row["low"]);
+        //     $close = floatval($row["close"]);
+        //     $volume = intval($row["volume"]);
 
-            $stmt->bind_param("siidddi", $ticker, $timestamp, $open, $high, $low, $close, $volume);
-            $stmt->execute();
-        }
+        //     $stmt->bind_param("siddddi", $ticker, $timestamp, $open, $high, $low, $close, $volume);
+        //     $stmt->execute();
+        // }
 
-        $stmt->close();
-        $db->close();
+        // $stmt->close();
+        // $db->close();
+        $tempFile = tempnam(sys_get_temp_dir(), 'stock_data_');
+        file_put_contents($tempFile, json_encode($response["payload"]["data"]));
 
-        return buildResponse("FETCH_SPECIFIC_STOCK_DATA_RESPONSE", "SUCCESS", ["data" => $response["payload"]["data"]]);
+        // Trigger background process to insert data into DB
+        insertDataInBackground($tempFile);
+        return buildResponse("FETCH_SPECIFIC_STOCK_DATA_RESPONSE", "SUCCESS", ["data" => ["stockData" => $response["payload"]["data"], "stockInfo" => $dataStock], "message" => "Stock data fetched from external API."]);
     }
 
     //  If data is still unavailable
@@ -628,5 +644,9 @@ function fetchSpecificStockData($sessionId, $ticker, $startTime, $endTime) {
 }
 
 
+function insertDataInBackground($filePath) {
+    // Use exec() to run the insertion process in the background
+    exec("php dbAsyncInsertion.php $filePath > /dev/null 2>&1 &");
+}
 
 ?>

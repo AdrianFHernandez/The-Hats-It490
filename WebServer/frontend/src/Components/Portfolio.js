@@ -1,18 +1,22 @@
 import React from "react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 function Portfolio({ userAccount}) {
   const [selectedTicker, setSelectedTicker] = useState(null);
+  const navigate = useNavigate();
+
 
   if (!userAccount) return <p>Loading portfolio...</p>;
   console.log("userAccount: inside Portoflio", userAccount);
 
 
     // Handle ticker selection from the Portfolio component
-    const handleTickerSelect = (ticker) => {
-      if (ticker === selectedTicker) return;
+    const onSelectTicker = (ticker) => {
+      // if (ticker === selectedTicker) return;
       console.log(`Switching to ticker: ${ticker}`);
-      setSelectedTicker(ticker);
+      // setSelectedTicker(ticker);
+      navigate(`/chartpage/${ticker}`);
     };
 
   return (
@@ -45,7 +49,7 @@ function Portfolio({ userAccount}) {
                 <tr key={ticker}>
                   <td
                     style={{ ...styles.td, cursor: "pointer", color: "blue" }}
-                    // onClick={() => onSelectTicker(ticker)}
+                    onClick={() => onSelectTicker(ticker)}
                   >
                     {ticker}
                   </td>

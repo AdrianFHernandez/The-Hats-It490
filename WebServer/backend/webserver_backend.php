@@ -107,9 +107,9 @@ function handleLogin($data) {
             "expires" => $session_expires,
             "path" => "/",
             "domain" => "www.sample.com",
-            "secure" => false,
+            "secure" => true, // change to false for http testing
             "httponly" => true,
-            "samesite" => "lax"
+            "samesite" => "None" // lax
         ]);
 
         echo json_encode([
@@ -277,17 +277,24 @@ function handlePerformTransaction($data){
     
 }
 function handleGetStockInfo($data){
-    $ticker = $data["ticker"];
+    $ticker = $data["ticker"] ?? '';
+    $marketCapMin = $data["marketCapMin"] ?? '';
+    $marketCapMax = $data["marketCapMax"] ?? '';
     // Send logout request to RabbitMQ
     if (!isset($_COOKIE['PHPSESSID'])) {
-        echo json_encode(["success" => true, "message" => "Session cookie not set2"]);
+        echo json_encode(["valid" => false, "message" => "Session cookie not set"]);
         exit();
     }
      
+   
     $client = get_client();
+    
+
     $request = buildRequest('GET_STOCK_INFO', [
         'sessionId' => $_COOKIE['PHPSESSID'],
-        'ticker' => $ticker
+        'ticker' => $ticker,
+        'marketCapMin' => $marketCapMin,
+        'marketCapMax' => $marketCapMax
     ]);
     
     $response = $client->send_request($request);
@@ -299,7 +306,7 @@ function handleGetStockInfo($data){
         );
     }
     else{
-        echo json_encode(["valid" => false, "error" => "Invalid or expired sesasion"]);
+        echo json_encode(["message" => $response["payload"]["message"] ?? "Failed to fetch stock info"]);
     }
 
 
@@ -324,7 +331,9 @@ function handleFetchSpecificStockData( $data ){
     $response = $client->send_request($request);
     if ($response && $response["status"] === "SUCCESS" && $response["type"] === "FETCH_SPECIFIC_STOCK_DATA_RESPONSE") {
         echo json_encode([
-            "chartData" => $response["payload"]["data"]
+            "message" => $response["payload"]["message"],
+            "chartData" => $response["payload"]["data"]["stockData"],
+            "stockInfo" => $response["payload"]["data"]["stockInfo"]
         ]);
     } else {
         echo json_encode(["error" => "Failed to fetch stock data"]);
