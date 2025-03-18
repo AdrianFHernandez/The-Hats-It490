@@ -11,7 +11,7 @@ function sendEmail($to, $subject, $content) {
     $email->addTo($to);
     $email->addContent("text/plain", $content);
 
-    $sendgrid = new \SendGrid('api_key');
+    $sendgrid = new \SendGrid('process.env.SENDGRID_API_KEY');
     try {
         $response = $sendgrid->send($email);
         return $response->statusCode();
