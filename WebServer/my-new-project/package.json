@@ -1,0 +1,25 @@
+{
+  "name": "zacks-api",
+  "version": "1.0.0",
+  "main": "index.js",
+  "description": "Zacks.com API",
+
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && Exit 1"
+    
+  },
+  "repository":{
+    "type":"git",
+    "url": "git+https://github.com/janlukasschroeder/zacks-api.git"
+  },
+  "keywords":[
+    "Zacks",
+    "API"
+  ],
+  "author": "",
+  "license": "ISC",
+  
+  "homepage": ""
+  
+}
