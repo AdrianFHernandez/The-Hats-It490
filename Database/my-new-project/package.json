@@ -1,0 +1,14 @@
+{
+  "name": "my-new-project",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "zacks-api": "^1.0.5"
+  }
+}
