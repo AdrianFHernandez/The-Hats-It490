@@ -210,7 +210,34 @@ function handleGetAccountInfo(){
 
     ob_clean();
     if ($response && $response["status"] === "SUCCESS" && $response["type"] === "GET_ACCOUNT_INFO_RESPONSE") {
-        echo json_encode($response["payload"]["data"]);       
+        $payload = $response["payload"];
+        echo json_encode($payload["data"]);
+           
+    
+
+    // EXPECTING SOMETHING LIKE THIS:
+    // return response = {
+    //     "user" : {
+    //         "userStocks" : {
+    //             "TSLA": {
+    //                "companyName" : "Tesla",
+    //                "companyDescription": "This company does this ...",
+    //                "count" : 2,
+    //                "averagePrice" : 300
+    //             },
+    //             "VOO" : {
+    //                 "count" : 1,
+    //                 "avergaePrice" : 390
+    //             }
+    //         },
+    //         "userBalance": {
+    //             "cashBalance": 10, 
+    //             "stockBalance": 990,
+    //             "totalBalance" : 1000
+    //         }
+    //     }
+    // }
+        
     } else {
         echo json_encode(["valid" => false, "error" => "Invalid or expired sesasion"]);
     }

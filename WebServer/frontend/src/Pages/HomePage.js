@@ -3,12 +3,14 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import TradingChart from "../Components/TradingChart";
 import getBackendURL from "../Utils/backendURL";
+import Portfolio from "../Components/Portfolio";
 
 function HomePage({ user, handleLogout }) {
-  // State variables
-  const [userBalance, setUserBalance] = useState(null);
-  const [haveUserBalance, gettingUserBalance] = useState(false);
-  const [userInfo, setUserInfo] = useState(null);
+
+  // useState that runs to retrieve userBalance 
+  const [userBalance, setUserBalance] = useState(null)
+  const [haveUserBalance, gettingUserBalance] = useState(false)
+  const [account, setAccount] = useState(null)
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -20,23 +22,12 @@ function HomePage({ user, handleLogout }) {
           { withCredentials: true } // Send cookies for session authentication
         );
 
-        
-        console.log("API Response is :", response);
-        if (response.status === 200 && response.data) {
-          const { userStocks, userBalance } = response.data.user;
-          console.log("Full API Response is :", response.data);
-          if (!userBalance) {
-            console.error("User balance is missing from response.");
-            setError("User balance data is unavailable.");
-            return;
-          }
-
-          console.log("User Balance:", userBalance);
-
-          // Store full user balance object
-          gettingUserBalance(true);
-          setUserBalance(userBalance);
-          setUserInfo(response.data.user);
+        console.log(JSON.stringify(response.data));
+  
+        if (response.data) {
+          gettingUserBalance(true)
+          // setUserBalance(response.data.userTotalBalance)
+          setAccount(response.data)
         } else {
           setError("Unable to get user balance");
         }
@@ -49,6 +40,8 @@ function HomePage({ user, handleLogout }) {
     getUserInfo();
   }, []);
 
+
+  
   return (
     <div className="homepage container">
       <h1>Welcome to your Home Page</h1>
@@ -62,14 +55,10 @@ function HomePage({ user, handleLogout }) {
           <h3>Logged in as: {user.username}</h3>
 
           <button onClick={handleLogout}>Logout</button>
-          {/* <TradingChart Ticker={"TSLA"} /> */}
-
-          {haveUserBalance ? (
-            <h2>Your current balance is: {userBalance?.totalBalance || "N/A"}</h2>
-          ) : (
-            <h2>Loading your balance...</h2>
-          )}
-
+          <TradingChart Ticker={"TSLA"}></TradingChart>
+          {/* {account && console.log("account", account.user)} */}
+          {account ? <Portfolio userAccount={account.user} ></Portfolio> : <p>Loading portfolio...</p>}
+          {haveUserBalance ? <h2> Your current balance is : {userBalance} </h2> : <h2> Loading your balance</h2>}
           <button onClick={handleLogout}>Logout</button>
         </div>
       ) : (

@@ -1,24 +1,34 @@
 import React from "react";
+import { useState } from "react";
 
-function Portfolio({ userAccount, onSelectTicker }) {
+function Portfolio({ userAccount}) {
+  const [selectedTicker, setSelectedTicker] = useState(null);
+
   if (!userAccount) return <p>Loading portfolio...</p>;
+  console.log("userAccount: inside Portoflio", userAccount);
 
-  const { userStocks, userBalance } = userAccount;
+
+    // Handle ticker selection from the Portfolio component
+    const handleTickerSelect = (ticker) => {
+      if (ticker === selectedTicker) return;
+      console.log(`Switching to ticker: ${ticker}`);
+      setSelectedTicker(ticker);
+    };
 
   return (
     <div style={styles.container}>
 
       <div style={styles.balanceContainer}>
         <h2>Account Balance</h2>
-        <p><strong>Buying Power:</strong> ${userBalance.buyingPower.toFixed(2)}</p>
-        <p><strong>Stock Balance:</strong> ${userBalance.stockBalance.toFixed(2)}</p>
-        <p><strong>Total Balance:</strong> ${userBalance.totalBalance.toFixed(2)}</p>
+        <p><strong>Buying Power:</strong> ${parseFloat(userAccount.userBalance.cashBalance).toFixed(2)}</p>
+        <p><strong>Stock Balance:</strong> ${parseFloat(userAccount.userBalance.stockBalance).toFixed(2)}</p>
+        <p><strong>Total Balance:</strong> ${parseFloat(userAccount.userBalance.totalBalance).toFixed(2)}</p>
       </div>
 
   
       <div style={styles.stocksContainer}>
         <h2>Owned Stocks</h2>
-        {Object.keys(userStocks).length === 0 ? (
+        {Object.keys(userAccount.userStocks).length === 0 ? (
           <p>No stocks owned</p>
         ) : (
           <table style={styles.table}>
@@ -31,17 +41,17 @@ function Portfolio({ userAccount, onSelectTicker }) {
               </tr>
             </thead>
             <tbody>
-              {Object.entries(userStocks).map(([ticker, stock]) => (
+              {Object.entries(userAccount.userStocks).map(([ticker, stock]) => (
                 <tr key={ticker}>
                   <td
                     style={{ ...styles.td, cursor: "pointer", color: "blue" }}
-                    onClick={() => onSelectTicker(ticker)}
+                    // onClick={() => onSelectTicker(ticker)}
                   >
                     {ticker}
                   </td>
                   <td style={styles.td}>{stock.companyName || "N/A"}</td>
                   <td style={styles.td}>{stock.count}</td>
-                  <td style={styles.td}>${stock.averagePrice?.toFixed(2) || "N/A"}</td>
+                  <td style={styles.td}>${parseFloat(stock.averagePrice).toFixed(2) || "N/A"}</td>
                 </tr>
               ))}
             </tbody>
