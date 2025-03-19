@@ -5,6 +5,8 @@ header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 header('Content-Type: application/json');
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
 // Handle preflight request
 if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
@@ -18,6 +20,8 @@ require_once('path.inc');
 require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 
+
+require '/home/ubuntu/Desktop/The-Hats-It490/WebServer/backend/vendor/autoload.php';  // Use absolute path
 
 
 // Decode incoming JSON request
@@ -244,10 +248,9 @@ function handleGetAccountInfo(){
 
 }
 
-function handlePerformTransaction($data){
-
+function handlePerformTransaction($data) {
     if (!isset($_COOKIE['PHPSESSID'])) {
-        echo json_encode(["success" => true, "message" => "Session cookie not set"]);
+        echo json_encode(["success" => false, "message" => "Session cookie not set"]);
         exit();
     }
 
@@ -263,19 +266,63 @@ function handlePerformTransaction($data){
         'price' => $price,
         'type' => $transactionType
     ]);
+
     $response = $client->send_request($request);
+
     if ($response && $response["status"] === "SUCCESS" && $response["type"] === "PERFORM_TRANSACTION_RESPONSE") {
-        echo json_encode([
-            "success" => true,
-            "message" => $response["payload"]["message"]
-        ]);
+        $user = $response["payload"]["user"];
+        $email = $user["email"] ?? null; // Ensure email exists
+        $username = $user["name"] ?? "User";
+
+        if ($email) {
+            // Create PHPMailer instance
+            $mail = new PHPMailer(true);
+            try {
+                // SMTP Configuration
+                $mail->isSMTP();
+                $mail->Host = 'smtp.gmail.com'; // SMTP Server (Gmail)
+                $mail->SMTPAuth = true;
+                $mail->Username = 'hatsit490@gmail.com'; // Your Gmail
+                $mail->Password = 'dmft jzxc ilqk xgqy'; // Generate an App Password (DO NOT USE YOUR MAIN PASSWORD)
+                $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+                $mail->Port = 587;
+
+                // Email Details
+                $mail->setFrom('your-email@gmail.com', 'Your Name');
+                $mail->addAddress($email, $username);
+                $mail->Subject = "Transaction Confirmation - $ticker";
+                $mail->Body = "Hello $username,\n\nYour transaction for $quantity shares of $ticker at $$price has been successfully processed.\n\nTransaction Type: $transactionType\n\nThank you for using our service!";
+
+                // Send the email
+                $mail->send();
+
+                echo json_encode([
+                    "success" => true,
+                    "message" => $response["payload"]["message"],
+                    "email_status" => "Email sent successfully",
+                    "user" => $user
+                ]);
+            } catch (Exception $e) {
+                echo json_encode([
+                    "success" => true,
+                    "message" => $response["payload"]["message"],
+                    "email_status" => "Email failed: " . $mail->ErrorInfo,
+                    "user" => $user
+                ]);
+            }
+        } else {
+            echo json_encode([
+                "success" => true,
+                "message" => $response["payload"]["message"],
+                "email_status" => "Email not sent (missing email address)",
+                "user" => $user
+            ]);
+        }
     } else {
         echo json_encode(["error" => $response["payload"]["message"] ?? "Transaction failed"]);
     }
-
-
-    
 }
+
 function handleGetStockInfo($data){
     $ticker = $data["ticker"] ?? '';
     $marketCapMin = $data["marketCapMin"] ?? '';

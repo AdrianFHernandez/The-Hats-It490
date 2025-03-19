@@ -474,7 +474,7 @@ function performTransaction($sessionId, $ticker, $quantity, $price, $transaction
                 throw new Exception("Insufficient buying power.");
             }
 
-            // Deduct buying power (
+            // Deduct buying power
             $stmt = $db->prepare("UPDATE Accounts SET buying_power = buying_power - ? WHERE account_id = ?");
             $stmt->bind_param("di", $cost, $accountId);
             $stmt->execute();
@@ -533,8 +533,20 @@ function performTransaction($sessionId, $ticker, $quantity, $price, $transaction
         $stmt->execute();
         $stmt->close();
 
+        // Fetch user details
+        $stmt = $db->prepare("SELECT userID, name, email, username, created_at FROM Users WHERE userID = ?");
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $userDetails = $result->fetch_assoc();
+        $stmt->close();
+
         $db->commit();
-        return buildResponse("PERFORM_TRANSACTION_RESPONSE", "SUCCESS", ["message" => "Transaction completed successfully"]);
+
+        return buildResponse("PERFORM_TRANSACTION_RESPONSE", "SUCCESS", [
+            "message" => "Transaction completed successfully",
+            "user" => $userDetails
+        ]);
     } catch (Exception $e) {
         $db->rollback();
         return buildResponse("PERFORM_TRANSACTION_RESPONSE", "FAILED", ["message" => $e->getMessage()]);
@@ -542,6 +554,7 @@ function performTransaction($sessionId, $ticker, $quantity, $price, $transaction
         $db->close();
     }
 }
+
 
 function fetchSpecificStockData($sessionId, $ticker, $startTime, $endTime) {
     // Validate session
