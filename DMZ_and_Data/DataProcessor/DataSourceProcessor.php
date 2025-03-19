@@ -30,7 +30,7 @@ function requestProcessor($request)
     case "FETCH_ALL_TICKERS":
       return fetchAllTickers();
     case "getStocksBasedOnRisk":
-      return getStocksBasedOnRisk($request['risk'], $request['riskFactor']);
+      return getStocksBasedOnRisk($request['risk']);
     case "FETCH_ALL_STOCKS":
         return fetchActiveStocks();
   }
