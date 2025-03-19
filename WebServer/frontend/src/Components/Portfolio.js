@@ -1,35 +1,38 @@
 import React from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import StockDiversityChart from "./StockDiversityChart";
+import { Container } from "react-bootstrap";
 
-function Portfolio({ userAccount}) {
+function Portfolio({ userAccount }) {
   const [selectedTicker, setSelectedTicker] = useState(null);
   const navigate = useNavigate();
 
-
   if (!userAccount) return <p>Loading portfolio...</p>;
-  console.log("userAccount: inside Portoflio", userAccount);
+  console.log("userAccount: inside Portfolio", userAccount);
 
-
-    // Handle ticker selection from the Portfolio component
-    const onSelectTicker = (ticker) => {
-      // if (ticker === selectedTicker) return;
-      console.log(`Switching to ticker: ${ticker}`);
-      // setSelectedTicker(ticker);
-      navigate(`/chartpage/${ticker}`);
-    };
+  const onSelectTicker = (ticker) => {
+    console.log(`Switching to ticker: ${ticker}`);
+    navigate(`/chartpage/${ticker}`);
+  };
 
   return (
-    <div style={styles.container}>
+    <Container style={styles.container}>
+      {/* Center both Account Balance and Pie Chart */}
+      <div style={styles.balanceAndChartContainer}>
+        <div style={styles.chartContainer}>
+          <StockDiversityChart userStocks={userAccount?.userStocks} />
+        </div>
 
-      <div style={styles.balanceContainer}>
-        <h2>Account Balance</h2>
-        <p><strong>Buying Power:</strong> ${parseFloat(userAccount.userBalance.cashBalance).toFixed(2)}</p>
-        <p><strong>Stock Balance:</strong> ${parseFloat(userAccount.userBalance.stockBalance).toFixed(2)}</p>
-        <p><strong>Total Balance:</strong> ${parseFloat(userAccount.userBalance.totalBalance).toFixed(2)}</p>
+        <div style={styles.balanceContainer}>
+          <h2>Account Balance</h2>
+          <p><strong>Buying Power:</strong> ${parseFloat(userAccount.userBalance.cashBalance).toFixed(2)}</p>
+          <p><strong>Stock Balance:</strong> ${parseFloat(userAccount.userBalance.stockBalance).toFixed(2)}</p>
+          <p><strong>Total Balance:</strong> ${parseFloat(userAccount.userBalance.totalBalance).toFixed(2)}</p>
+        </div>
       </div>
 
-  
+      {/* Owned Stocks Section */}
       <div style={styles.stocksContainer}>
         <h2>Owned Stocks</h2>
         {Object.keys(userAccount.userStocks).length === 0 ? (
@@ -62,7 +65,7 @@ function Portfolio({ userAccount}) {
           </table>
         )}
       </div>
-    </div>
+    </Container>
   );
 }
 
@@ -76,8 +79,21 @@ const styles = {
     boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
     fontFamily: "Arial, sans-serif",
   },
+  balanceAndChartContainer: {
+    display: "flex",
+    justifyContent: "center", // Centers both items
+    alignItems: "center",
+    gap: "50px", // Adds spacing between chart and balance
+    width: "100%",
+    textAlign: "center",
+  },
+  chartContainer: {
+    flex: 1,
+    maxWidth: "300px",
+  },
   balanceContainer: {
-    marginBottom: "20px",
+    flex: 1,
+    textAlign: "center", // Centers the text within
   },
   stocksContainer: {
     marginTop: "20px",
