@@ -657,6 +657,7 @@ function performTransaction($sessionId, $ticker, $quantity, $price, $transaction
 //     }
 // }
 
+
 function fetchSpecificStockData($sessionId, $ticker, $startTime, $endTime) {
     // Validate session
     if (($userId = getUserIDfromSession($sessionId)) === null) {

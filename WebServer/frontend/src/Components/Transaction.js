@@ -37,6 +37,7 @@ function Transaction({ stockData, chartData }) {
         window.alert(
           `Successfully ${type === "BUY" ? "bought" : "sold"} ${quantity} shares of ${stockData.ticker} at $${latestPrice.toFixed(2)}.`
         );
+        console.log("Succesfully got user data:", response.data);
       } else {
         throw new Error(response.data.error || "Transaction failed.");
       }
