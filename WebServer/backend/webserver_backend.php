@@ -390,8 +390,25 @@ function handleFetchSpecificStockData( $data ){
 
 
 function handleGetStocksBasedOnRisk($data){
-    
-    return "Not implemented yet";
+    echo "Select your risk preference (1 = None, 2 = Medium, 3 = Risky): ";
+    $risk = trim(readline());
+
+    if (!in_array($risk, ["1", "2", "3"])) {
+        echo "Invalid input. Defaulting to Medium.\n";
+        $risk = "2";
+    }
+    //$risk = $data["risk"] ?? "2";
+    //get client
+    $client = get_client();
+    $request = buildRequest("GET_STOCKS_BASED_ON_RISK", ["risk" => $risk]);
+    $response = $client->send_request($request);
+    if ($response && $response['status'] === 'SUCCESS'){
+        echo json_encode($response['payload']['data']);
+    }
+    else{
+        echo json_encode(['error'=>"No stocks found"]);
+    }
+
 }
 
 // Process API requests
