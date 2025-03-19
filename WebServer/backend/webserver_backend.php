@@ -21,8 +21,8 @@ require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 
 
-require '/home/ubuntu/Desktop/The-Hats-It490/WebServer/backend/vendor/autoload.php';  // Use absolute path
 
+require_once(__DIR__ . '/vendor/autoload.php');
 
 // Decode incoming JSON request
 $data = json_decode(file_get_contents("php://input"), true);
