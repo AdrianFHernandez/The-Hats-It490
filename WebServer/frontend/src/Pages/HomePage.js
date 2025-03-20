@@ -10,6 +10,7 @@ function HomePage({ user, handleLogout }) {
   const [haveUserBalance, setHaveUserBalance] = useState(false);
   const [account, setAccount] = useState(null);
   const [error, setError] = useState("");
+  const [riskFactor, setRiskFactor] = useState("Low");  
 
   useEffect(() => {
     const getUserInfo = async () => {
@@ -41,6 +42,34 @@ function HomePage({ user, handleLogout }) {
 
     getUserInfo();
   }, []);
+
+  const handleRisk = (event) => {
+    const selectedRisk = event.target.value;
+    setRiskFactor(selectedRisk)
+
+
+  riskFactorToBackend(selectedRisk);
+  };
+
+  const sendRiskFactorToBackend = async (selectedRisk) => {
+    try {
+      const response = await axios.post(
+        getBackendURL(),
+        { type: "UPDATE_RISK_FACTOR", riskFactor: selectedRisk },
+        { withCredentials: true }
+      );
+      if (response.status === 200) {
+        console.log("Risk factor updated successfully");
+      } else {
+        setError("Failed to update risk factor.");
+      }
+    } catch (error) {
+      console.error("Error updating risk factor:", error);
+      setError("Error sending risk factor to backend.");
+    }
+  };
+
+
 
   return (
     <div className="homepage container">
