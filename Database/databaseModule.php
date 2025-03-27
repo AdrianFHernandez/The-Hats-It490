@@ -15,16 +15,6 @@ function getClientForDMZ()
     return $client;
 }
 
-function generate2FACode($userId) {
-    $code = rand(1000, 9999); // Generate a 4-digit code.
-    $conn = dbConnect();
-    $stmt = $conn->prepare("INSERT INTO user_codes (userId, code) VALUES (?, ?)");
-    $stmt->bind_param("si", $userId, $code);
-    $stmt->execute();
-    $stmt->close();
-    $conn->close();
-    return $code;
-}
 
 function buildRequest($type, $payload = []){
     return [
@@ -53,6 +43,16 @@ function dbConnect()
     }
 
     return $conn;
+}
+function generate2FACode($userId) {
+    $code = rand(1000, 9999); // Generate a 4-digit code.
+    $conn = dbConnect();
+    $stmt = $conn->prepare("INSERT INTO user_codes (userId, code) VALUES (?, ?)");
+    $stmt->bind_param("si", $userId, $code);
+    $stmt->execute();
+    $stmt->close();
+    $conn->close();
+    return $code;
 }
 
 
