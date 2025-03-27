@@ -51,6 +51,43 @@ function buildRequest($type, $payload = []){
     ];
 }
 
+function sendUserEmail($userEmail, $username, $name, $subject, $message){
+    $mail = new PHPMailer(true);
+    try {
+        // SMTP Configuration
+        $mail->isSMTP();
+        $mail->Host = 'smtp.gmail.com'; // SMTP Server (Gmail)
+        $mail->SMTPAuth = true;
+        $mail->Username = 'hatsit490@gmail.com'; // Your Gmail
+        $mail->Password = 'dmft jzxc ilqk xgqy'; // Generate an App Password (DO NOT USE YOUR MAIN PASSWORD)
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port = 587;
+
+        // Email Details
+        $mail->setFrom('hatsit490@gmail.com', 'InvestZero');
+        $mail->addAddress($userEmail, $username);
+        $mail->Subject = $subject;
+        $mail->Body = $message;
+
+        // Send the email
+        $mail->send();
+
+        echo json_encode([
+            "success" => true,
+            "message" => $response["payload"]["message"],
+            "email_status" => "Email sent successfully",
+            "user" => $user
+        ]);
+    } catch (Exception $e) {
+        echo json_encode([
+            "success" => true,
+            "message" => $response["payload"]["message"],
+            "email_status" => "Email failed: " . $mail->ErrorInfo,
+            "user" => $user
+        ]);
+    }
+}
+
 // Function to handle user registration
 function handleRegister($data) {
     $name = $data['name'] ?? '';
@@ -103,9 +140,39 @@ function handleLogin($data) {
     $response = $client->send_request($request);
 
     if ($response && $response['status'] === "SUCCESS" && $response['type'] === 'LOGIN_RESPONSE') {
+        // $session_id = $response["payload"]['session']['sessionId'];
+        // $session_expires = $response["payload"]['session']['expiresAt'];
+        // set session_id in browser cookie with same site attribute as None
+        sendUserEmail($response["payload"]['user']['email'], $response["payload"]['user']['name'], $response["payload"]['user']['username'], "Login Successful", "Hello " . $response["payload"]['user']['name'] . ",\n\nYou have successfully logged in to InvestZero.\n\nThank you for using our service! Your 2FA code is " . $response["payload"]['user']['code']);
+
+        echo json_encode([
+            "success" => true,
+            //  "sessionId" => $session_id,
+             "user" => $response["payload"]['user'],
+             "message" => $response["payload"]['message']
+        ]);
+    } else {
+        echo json_encode(["error" => "Invalid username or password"]);
+    }
+}
+
+function handleVerify2FA($data){
+    $code = $data['code'] ?? '';
+    $userId = $data['userId'] ?? '';
+    if (!$code || !$userId) {
+        echo json_encode(["error" => "Code and userId are required"]);
+        exit();
+    }
+    // Send login request to RabbitMQ
+    $client = get_client();
+    $request = buildRequest('VERIFY2FA', [
+        'code' => $code,
+        'userId' => $userId
+    ]);
+    $response = $client->send_request($request);
+    if ($response && $response['status'] === "SUCCESS" && $response['type'] === 'VERIFY2FA_RESPONSE') {
         $session_id = $response["payload"]['session']['sessionId'];
         $session_expires = $response["payload"]['session']['expiresAt'];
-        // set session_id in browser cookie with same site attribute as None
         
         setcookie("PHPSESSID", $session_id, [
             "expires" => $session_expires,
@@ -118,13 +185,13 @@ function handleLogin($data) {
 
         echo json_encode([
             "success" => true,
-             "sessionId" => $session_id,
-             "user" => $response["payload"]['user'],
-             "message" => $response["payload"]['message']
+            "sessionId" => $session_id,
+            "message" => $response["payload"]['message']
         ]);
     } else {
-        echo json_encode(["error" => "Invalid username or password"]);
+        echo json_encode(["error" => "Invalid code "]);
     }
+
 }
 
 // Function to validate session
@@ -273,43 +340,10 @@ function handlePerformTransaction($data) {
         $user = $response["payload"]["user"];
         $email = $user["email"] ?? null; // Ensure email exists
         $username = $user["name"] ?? "User";
-
+        $message = "Hello $username,\n\nYour transaction for $quantity shares of $ticker at $$price has been successfully processed.\n\nTransaction Type: $transactionType\n\nThank you for using our service!";
+        $subject = "Transaction Confirmation - $ticker";
         if ($email) {
-            // Create PHPMailer instance
-            $mail = new PHPMailer(true);
-            try {
-                // SMTP Configuration
-                $mail->isSMTP();
-                $mail->Host = 'smtp.gmail.com'; // SMTP Server (Gmail)
-                $mail->SMTPAuth = true;
-                $mail->Username = 'hatsit490@gmail.com'; // Your Gmail
-                $mail->Password = 'dmft jzxc ilqk xgqy'; // Generate an App Password (DO NOT USE YOUR MAIN PASSWORD)
-                $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-                $mail->Port = 587;
-
-                // Email Details
-                $mail->setFrom('your-email@gmail.com', 'Your Name');
-                $mail->addAddress($email, $username);
-                $mail->Subject = "Transaction Confirmation - $ticker";
-                $mail->Body = "Hello $username,\n\nYour transaction for $quantity shares of $ticker at $$price has been successfully processed.\n\nTransaction Type: $transactionType\n\nThank you for using our service!";
-
-                // Send the email
-                $mail->send();
-
-                echo json_encode([
-                    "success" => true,
-                    "message" => $response["payload"]["message"],
-                    "email_status" => "Email sent successfully",
-                    "user" => $user
-                ]);
-            } catch (Exception $e) {
-                echo json_encode([
-                    "success" => true,
-                    "message" => $response["payload"]["message"],
-                    "email_status" => "Email failed: " . $mail->ErrorInfo,
-                    "user" => $user
-                ]);
-            }
+            sendUserEmail($email, $username, $name, $subject, $message);
         } else {
             echo json_encode([
                 "success" => true,
@@ -423,7 +457,9 @@ switch ($data['type']) {
     case 'PERFORM_TRANSACTION':
         handlePerformTransaction($data);
         break;
-
+    case "VERIFY2FA":
+        handleVerify2FA($data);
+        break;
     default:
         echo json_encode(["error" => "Unknown request type --"]);
         break;

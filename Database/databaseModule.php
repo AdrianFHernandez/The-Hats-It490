@@ -15,6 +15,16 @@ function getClientForDMZ()
     return $client;
 }
 
+function generate2FACode($userId) {
+    $code = rand(1000, 9999); // Generate a 4-digit code.
+    $conn = dbConnect();
+    $stmt = $conn->prepare("INSERT INTO user_codes (userId, code) VALUES (?, ?)");
+    $stmt->bind_param("si", $userId, $code);
+    $stmt->execute();
+    $stmt->close();
+    $conn->close();
+    return $code;
+}
 
 function buildRequest($type, $payload = []){
     return [
@@ -110,26 +120,29 @@ function doLogin($username, $password)
     $conn = dbConnect();
 
     // Get user from database
-    $stmt = $conn->prepare("SELECT userID, password, email, created_at FROM Users WHERE username = ?");
+    $stmt = $conn->prepare("SELECT userID, password, name, email, created_at FROM Users WHERE username = ?");
     $stmt->bind_param("s", $username);
     $stmt->execute();
     $stmt->store_result();
 
     if ($stmt->num_rows > 0) {
-        $stmt->bind_result($id, $hashedpass, $email, $createdAt);
+        $stmt->bind_result($id, $hashedpass, $name, $email, $createdAt);
         $stmt->fetch();
 
         if (password_verify($password, $hashedpass)) {
             $stmt->close();
             $conn->close();
+            $code = generate2FACode($id);
             
             return buildResponse("LOGIN_RESPONSE", "SUCCESS", [
-                "message" => "Login successful",
+                "message" => "Login successful, now please verify using code sent to email",
                 "user" => [
                     "id" => $id,
                     "username" => $username,
+                    "name" => $name,
                     "email" => $email,
-                    "created_at" => $createdAt
+                    "created_at" => $createdAt,
+                    "code" => $code
                 ]
             ]);
         }
@@ -139,7 +152,28 @@ function doLogin($username, $password)
     $conn->close();
     return buildResponse("LOGIN_RESPONSE", "FAILED", ["message" => "Invalid username or password"]);
 }
-
+function verify2FA($user_id, $code) {
+    $conn = dbConnect();
+    $stmt = $conn->prepare("SELECT code FROM user_codes WHERE userId = ? ORDER BY id DESC LIMIT 1");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $stmt->bind_result($dbCode);
+    $stmt->fetch();
+    $stmt->close();
+    $conn->close();
+    if ($dbCode == $code) {
+        //delte the code from the database
+        $conn = dbConnect();
+        $stmt = $conn->prepare("DELETE FROM user_codes WHERE userId = ? AND code = ?");
+        $stmt->bind_param("ii", $user_id, $code);
+        $stmt->execute();
+        $stmt->close();
+        $conn->close();
+        return buildResponse("VERIFY_2FA_RESPONSE", "SUCCESS", [
+            "message" => "2FA code verified"]);
+    }
+    return buildResponse("VERIFY_2FA_RESPONSE", "FAILED", ["message" => "Invalid 2FA code"]);
+}
 
 function validateSession($sessionId)
 {
