@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 import Navbar from "../Components/Navbar";  // Import Navbar
 import getBackendURL from "../Utils/backendURL";
 import Portfolio from "../Components/Portfolio";
+import Chatbot from "../Components/Chatbot";
+import RiskProfileStockPicker from "../Components/RiskProfileStockPicker";
 
 function HomePage({ user, handleLogout }) {
   const [userBalance, setUserBalance] = useState(null);
@@ -56,8 +58,7 @@ function HomePage({ user, handleLogout }) {
         <div>
           <h3>Logged in as: {user.username}</h3>
 
-          {account ? <Portfolio userAccount={account.user} /> : <p>Loading portfolio...</p>}
-
+          {account ? <> <Portfolio userAccount={account.user} />  <Chatbot></Chatbot> <RiskProfileStockPicker></RiskProfileStockPicker></>: <p>Loading portfolio...</p>}
          
         </div>
       ) : (

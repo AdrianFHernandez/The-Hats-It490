@@ -680,6 +680,22 @@ function getRecommendedStocks($sessionId, $riskLevel) {
     return buildResponse("GET_RECOMMENDED_STOCKS_RESPONSE", "FAILED", ["message" => "No recommended stocks found."]);
 }
 
+function getChatbotAnswer($sessionId, $question) {
+    if (($userId = getUserIDfromSession($sessionId)) === null) {
+        return buildResponse("GET_CHATBOT_ANSWER_RESPONSE", "FAILED", ["message" => "Invalid or expired session."]);
+    }
 
+    //get user information like stocks and amount and send to DMZ
+
+    $client = getClientForDMZ();
+    $request = buildRequest("GET_CHATBOT_ANSWER", ["question" => $question]);
+    $response = $client->send_request($request);
+
+    if ($response && $response["status"] === "SUCCESS") {
+        return buildResponse("GET_CHATBOT_ANSWER_RESPONSE", "SUCCESS", ["data" => $response["payload"]]);
+    }
+
+    return buildResponse("GET_CHATBOT_ANSWER_RESPONSE", "FAILED", ["message" => "No answer found."]);
+}
 
 ?>

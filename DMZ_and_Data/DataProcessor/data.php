@@ -173,7 +173,7 @@ function delayed_latest_price($ticker) {
 
 function getRecommendedStocks($riskLevel) {
     $baseUrl = "https://financialmodelingprep.com/api/v3/stock-screener";
-    $apiKey = "KncfzCxVyf2DNZKThmulnSaxBduf0vLp";
+    $apiKey = "";
     // Configure query parameters based on risk level
     switch ($riskLevel) {
         case 1:
@@ -250,6 +250,66 @@ function getRecommendedStocks($riskLevel) {
     }
 }
 
+function getChatbotAnswer($question) {
+    $api = ''; // Your actual API key
+    $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' . $apiKey;
+
+    // AIzaSyBLFwBnV4d2fCaY_nGquyAPoHeLnL5tE4o
+    // to the question add "less than 100 words" to get a concise answer
+
+    $postData = json_encode([
+        "contents" => [
+            [
+                "parts" => [
+                    ["text" => $question]
+                ]
+            ]
+        ]
+    ]);
+
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'Content-Length: ' . strlen($postData)
+    ]);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+
+    $response = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($http_code != 200) {
+        return buildResponse("GET_CHATBOT_ANSWER_RESPONSE", "FAILED", ["message" => "Error fetching response: HTTP $http_code"]);
+    }
+
+    $responseData = json_decode($response, true);
+
+    if (!$responseData) {
+        return buildResponse("GET_CHATBOT_ANSWER_RESPONSE", "FAILED", ["message" => "Failed to decode JSON data"]);
+    }
+
+    if (isset($responseData['candidates'][0]['content']['parts'][0]['text'])) {
+        $answerText = $responseData['candidates'][0]['content']['parts'][0]['text'];
+        $citations = [];
+        if (isset($responseData['candidates'][0]['citationMetadata']['citationSources'])) {
+            $sources = $responseData['candidates'][0]['citationMetadata']['citationSources'];
+            foreach ($sources as $index => $source) {
+                if ($index < 2) { 
+                    $citations[] = $source['uri'] ?? "Citation from characters " . $source['startIndex'] . " to " . $source['endIndex'];
+                }
+            }
+        }
+        return buildResponse("GET_CHATBOT_ANSWER_RESPONSE", "SUCCESS", [
+            "answer" => $answerText,
+            "citations" => $citations,
+            "message" => "Answer retrieved successfully"
+        ]);
+    } else {
+        return buildResponse("GET_CHATBOT_ANSWER_RESPONSE", "FAILED", ["message" => "No answer found in the response"]);
+    }
+}
 
 
 // fetch_all_stock_data("TSLA", 1738969811, 1741654317)

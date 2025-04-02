@@ -44,6 +44,8 @@ function requestProcessor($request)
             return fetchSpecificStockData($request["payload"]['sessionId'], $request["payload"]['ticker'], $request["payload"]['start'], $request["payload"]['end']);
         case "GET_RECOMMENDED_STOCKS":
             return getRecommendedStocks($request["payload"]['sessionId'], $request["payload"]['riskLevel']);
+        case "GET_CHATBOT_ANSWER":
+            return getChatbotAnswer($request["payload"]['sessionId'], $request["payload"]['question']);
         default:
             return buildResponse("ERROR", "FAILED", ["message" => "Invalid request type"]);
     }

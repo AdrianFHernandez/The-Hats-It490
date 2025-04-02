@@ -413,6 +413,31 @@ function handleGetRecommendedStocks($data){
     }
 }
 
+function handleGetChatbotAnswer($data){
+    $question = $data["question"] ?? '';
+     
+    if ($question == '') {
+        echo json_encode(["error" => "Invalid request"]);
+        exit();
+    }
+    $client = get_client();
+    $request = buildRequest('GET_CHATBOT_ANSWER', [
+        'sessionId' => $_COOKIE['PHPSESSID'],
+        'question' => $question
+    ]);
+    //
+    $response = $client->send_request($request);
+    if ($response && $response["status"] === "SUCCESS" && $response["type"] === "GET_CHATBOT_ANSWER_RESPONSE") {
+        echo json_encode([
+            "message" => $response["payload"]["data"]["message"],
+            "answer" => $response["payload"]["data"]["answer"],
+            "citations" => $response["payload"]["data"]["citations"]
+        ]);
+    } else {
+        echo json_encode(["error" => "Failed to fetch recommended stocks"]);
+    }
+}
+
 // Process API requests
 switch ($data['type']) {
     case 'REGISTER':
@@ -445,7 +470,9 @@ switch ($data['type']) {
     case "GET_RECOMMENDED_STOCKS":
         handleGetRecommendedStocks($data);
         break;
-
+    case "GET_CHATBOT_ANSWER":
+        handleGetChatbotAnswer($data);
+        break;
     default:
         echo json_encode(["error" => "Unknown request type --"]);
         break;

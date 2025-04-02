@@ -28,6 +28,8 @@ function requestProcessor($request)
         return fetchActiveStocks();
     case "GET_RECOMMENDED_STOCKS":
         return getRecommendedStocks($request['riskLevel']);
+    case "GET_CHATBOT_ANSWER":
+        return getChatbotAnswer($request['question']);
   }
 
   return buildResponse("ERROR", "FAILED", ["message" => "Request type not supported"]);
