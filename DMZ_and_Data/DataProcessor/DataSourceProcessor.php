@@ -22,14 +22,12 @@ function requestProcessor($request)
       return delayed_latest_price($request["ticker"]);
     case "FETCH_ALL_TICKERS":
       return fetchAllTickers();
-    case "getStocksBasedOnRisk":
-      return getStocksBasedOnRisk($request['risk'], $request['riskFactor']);
     case "FETCH_ALL_STOCKS":
         return fetchActiveStocks();
     case "GET_RECOMMENDED_STOCKS":
-        return getRecommendedStocks($request['riskLevel']);
+        return getRecommendedStocks($request['payload']['riskLevel']);
     case "GET_CHATBOT_ANSWER":
-        return getChatbotAnswer($request['question']);
+        return getChatbotAnswer($request['payload']['question']);
   }
 
   return buildResponse("ERROR", "FAILED", ["message" => "Request type not supported"]);

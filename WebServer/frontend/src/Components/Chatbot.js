@@ -14,11 +14,16 @@ function Chatbot(){
         setLoading(true);
         setError(null);
         try {
+
+            console.log("Before sending post : ", question);
             const response = await axios.post(
                 getBackendURL(), 
-                {withCredentials: true},
-                {type : "GET_CHATBOT_ANSWER" , question : question}, 
+                {type : "GET_CHATBOT_ANSWER" , question}, 
+                {withCredentials: true}
+
             );
+            console.log("After sending post : ", response);
+            
             
           if (response.status === 200 && response.data) {
               setAnswer(response.data.answer);

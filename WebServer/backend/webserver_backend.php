@@ -29,7 +29,7 @@ $data = json_decode(file_get_contents("php://input"), true);
 
 // Ensure valid request
 if (!$data || !isset($data['type'])) {
-    echo json_encode(["error" => "Invalid request"]);
+    echo json_encode(["error" => "Invalid request check", "data" => $data]);
     exit();
 }
 
@@ -417,7 +417,7 @@ function handleGetChatbotAnswer($data){
     $question = $data["question"] ?? '';
      
     if ($question == '') {
-        echo json_encode(["error" => "Invalid request"]);
+        echo json_encode(["error" => "Invalid requestS", "question" => $question]);
         exit();
     }
     $client = get_client();

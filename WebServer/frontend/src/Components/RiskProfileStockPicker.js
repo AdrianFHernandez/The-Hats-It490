@@ -15,14 +15,17 @@ function RiskProfileStockPicker() {
     setLoading(true);
     setError(null);
     try {
+      console.log("Before sending post : ", riskLevel);
         const response = await axios.post(
             getBackendURL(), 
-            {withCredentials: true},
-            {type : "GET_RECOMMENDED_STOCKS" , riskLevel : riskLevel}, 
+            {type : "GET_RECOMMENDED_STOCKS" , riskLevel}, 
+            {withCredentials: true}
         );
-        
       if (response.status === 200 && response.data) {
           setStocks(response.data.recommendedStocks);
+          console.log("Stocks: ", stocks)
+          console.log("Response.data.recoomended stocks: ", response.data.recommendedStocks);
+
       }else{
           setError("Unable to fetch stock data"); 
       }
