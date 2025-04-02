@@ -662,4 +662,24 @@ function insertDataInBackground($filePath) {
     exec("php dbAsyncInsertion.php $filePath > /dev/null 2>&1 &");
 }
 
+
+function getRecommendedStocks($sessionId, $riskLevel) {
+    if (($userId = getUserIDfromSession($sessionId)) === null) {
+        return buildResponse("GET_RECOMMENDED_STOCKS_RESPONSE", "FAILED", ["message" => "Invalid or expired session."]);
+    }
+
+    $client = getClientForDMZ();
+    $request = buildRequest("GET_RECOMMENDED_STOCKS", ["riskLevel" => $riskLevel]);
+    //
+    $response = $client->send_request($request);
+
+    if ($response && $response["status"] === "SUCCESS" && !empty($response["payload"]["data"])) {
+        return buildResponse("GET_RECOMMENDED_STOCKS_RESPONSE", "SUCCESS", ["data" => $response["payload"]["data"]]);
+    }
+
+    return buildResponse("GET_RECOMMENDED_STOCKS_RESPONSE", "FAILED", ["message" => "No recommended stocks found."]);
+}
+
+
+
 ?>

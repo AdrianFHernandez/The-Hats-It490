@@ -389,9 +389,28 @@ function handleFetchSpecificStockData( $data ){
 }
 
 
-function handleGetStocksBasedOnRisk($data){
-    
-    return "Not implemented yet";
+function handleGetRecommendedStocks($data){
+    $riskLevel = $data["riskLevel"] ?? '';
+     
+    if ($riskLevel == '') {
+        echo json_encode(["error" => "Invalid request"]);
+        exit();
+    }
+    $client = get_client();
+    $request = buildRequest('GET_RECOMMENDED_STOCKS', [
+        'sessionId' => $_COOKIE['PHPSESSID'],
+        'riskLevel' => $riskLevel
+    ]);
+    //
+    $response = $client->send_request($request);
+    if ($response && $response["status"] === "SUCCESS" && $response["type"] === "GET_RECOMMENDED_STOCKS_RESPONSE") {
+        echo json_encode([
+            "message" => $response["payload"]["message"],
+            "recommendedStocks" => $response["payload"]["data"]
+        ]);
+    } else {
+        echo json_encode(["error" => "Failed to fetch recommended stocks"]);
+    }
 }
 
 // Process API requests
@@ -422,6 +441,9 @@ switch ($data['type']) {
         break;
     case 'PERFORM_TRANSACTION':
         handlePerformTransaction($data);
+        break;
+    case "GET_RECOMMENDED_STOCKS":
+        handleGetRecommendedStocks($data);
         break;
 
     default:

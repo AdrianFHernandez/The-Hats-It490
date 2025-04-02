@@ -26,6 +26,8 @@ function requestProcessor($request)
       return getStocksBasedOnRisk($request['risk'], $request['riskFactor']);
     case "FETCH_ALL_STOCKS":
         return fetchActiveStocks();
+    case "GET_RECOMMENDED_STOCKS":
+        return getRecommendedStocks($request['riskLevel']);
   }
 
   return buildResponse("ERROR", "FAILED", ["message" => "Request type not supported"]);

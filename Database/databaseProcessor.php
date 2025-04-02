@@ -42,7 +42,9 @@ function requestProcessor($request)
             return performTransaction($request["payload"]['sessionId'], $request["payload"]['ticker'], $request["payload"]['quantity'], $request["payload"]['price'], $request["payload"]['type']);
         case "FETCH_SPECIFIC_STOCK_DATA":
             return fetchSpecificStockData($request["payload"]['sessionId'], $request["payload"]['ticker'], $request["payload"]['start'], $request["payload"]['end']);
-            default:
+        case "GET_RECOMMENDED_STOCKS":
+            return getRecommendedStocks($request["payload"]['sessionId'], $request["payload"]['riskLevel']);
+        default:
             return buildResponse("ERROR", "FAILED", ["message" => "Invalid request type"]);
     }
 }

@@ -171,12 +171,85 @@ function delayed_latest_price($ticker) {
     }
 }
 
-$count = 1;
-function getStocksBasedOnRisk($risk, $riskFactor) {
-    global $count;
-    $count++;
-    return ["returnCode" => '0', "message" => "Stocks based on risk " . $risk . " " . $riskFactor , "count" => $count];
+function getRecommendedStocks($riskLevel) {
+    $baseUrl = "https://financialmodelingprep.com/api/v3/stock-screener";
+    $apiKey = "KncfzCxVyf2DNZKThmulnSaxBduf0vLp";
+    // Configure query parameters based on risk level
+    switch ($riskLevel) {
+        case 1:
+            $queryParams = [
+                'betaLowerThan' => 1,
+                'marketCapMoreThan' => 10000000000,
+                'isActivelyTrading' => 'true',
+                'limit' => 10,
+                'apikey' => $apiKey
+            ];
+            break;
+        case 2:
+            $queryParams = [
+                'betaMoreThan' => 1,
+                'betaLowerThan' => 2,
+                'marketCapMoreThan' => 2000000000,
+                'marketCapLowerThan' => 10000000000,
+                'isActivelyTrading' => 'true',
+                'limit' => 10,
+                'apikey' => $apiKey
+            ];
+            break;
+        case 3:
+            $queryParams = [
+                'betaMoreThan' => 2,
+                'marketCapLessThan' => 2000000000,
+                'isActivelyTrading' => 'true',
+                'limit' => 10,
+                'apikey' => $apiKey
+            ];
+            break;
+        default:
+            return buildResponse("GET_RECOMMENDED_STOCKS_RESPONSE", "FAILED", ["message" => "Invalid risk level. Choose 1 (Conservative), 2 (Casual), or 3 (Risky)"]);
+    }
+
+    // Build the URL with query parameters
+    $url = $baseUrl . '?' . http_build_query($queryParams);
+
+    // Initialize cURL session
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $response = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    // Handle HTTP errors
+    if ($http_code != 200) {
+        return buildResponse("GET_RECOMMENDED_STOCKS_RESPONSE", "FAILED", ["message" => "Error fetching stocks: HTTP $http_code - Response: $response"]);
+    }
+
+    // Decode JSON response
+    $data = json_decode($response, true);
+
+    // Handle JSON parsing errors
+    if (!$data) {
+        return buildResponse("GET_RECOMMENDED_STOCKS_RESPONSE", "FAILED", ["message" => "Failed to decode JSON data"]);
+    }
+
+    // Process data if available
+    if (is_array($data) && count($data) > 0) {
+        $filteredData = array_map(function ($stock) {
+            return [
+                "ticker" => $stock['symbol'],
+                "name" => $stock['companyName'] ?? "N/A",
+                "marketCap" => $stock['marketCap'],
+                "beta" => $stock['beta']
+            ];
+        }, $data);
+        
+        return buildResponse("GET_RECOMMENDED_STOCKS_RESPONSE", "SUCCESS", ["data" => $filteredData, "message" => "Stocks data retrieved successfully"]);
+    } else {
+        return buildResponse("GET_RECOMMENDED_STOCKS_RESPONSE", "FAILED", ["message" => "No stocks data found"]);
+    }
 }
+
 
 
 // fetch_all_stock_data("TSLA", 1738969811, 1741654317)
