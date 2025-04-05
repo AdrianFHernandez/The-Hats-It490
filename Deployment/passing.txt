@@ -1,0 +1,1 @@
+sshpass -p it490 scp  tds22-it490@100.105.37.26:/home/tds22-it490/Deployment/TempBundles/login_package_v8.zip /home/tds22-it490/deploy_archive/login_package_v8.zip
