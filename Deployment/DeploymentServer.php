@@ -127,27 +127,40 @@ function listBundleVersions($bundleName) {
 }
 
 function logToQueue($logData) {
-    $connection = new AMQPStreamConnection('100.96.178.79', 5672, 'hats', 'it490@123', 'hatshost');
-    $channel = $connection->channel();
+    // Validate the input before doing anything
+    if (!isset($logData['level']) || !isset($logData['message'])) {
+        return [
+            "status" => "error",
+            "message" => "Missing required log fields: 'level' and/or 'message'."
+        ];
+    }
 
-    
-    $channel->exchange_declare('log_broadcast', 'fanout', false, true, false);
+    try {
+        $connection = new AMQPStreamConnection('100.96.178.79', 5672, 'hats', 'it490@123', 'hatshost');
+        $channel = $connection->channel();
+        $channel->exchange_declare('log_broadcast', 'fanout', false, true, false);
+        $logMessage = new AMQPMessage(json_encode($logData), [
+            'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT
+        ]);
 
-    // Prepare the log message
-    $logMessage = new AMQPMessage(json_encode($logData), [
-        'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT
-    ]);
+        $channel->basic_publish($logMessage, 'log_broadcast');
 
-    // Send the log to the exchange (fanout, so routing key is empty)
-    $channel->basic_publish($logMessage, 'log_broadcast');
+        $channel->queue_declare('log_queue', false, true, false, false);
+        $channel->basic_publish($logMessage, '', 'log_queue');
 
+        $channel->close();
+        $connection->close();
 
-    $channel->queue_declare('log_queue', false, true, false, false);
-    $channel->basic_publish($logMessage, '', 'log_queue');
-
-    // Close the channel and connection
-    $channel->close();
-    $connection->close();
+        return [
+            "status" => "success",
+            "message" => "Log sent to queue and exchange."
+        ];
+    } catch (Exception $e) {
+        return [
+            "status" => "error",
+            "message" => "Failed to log: " . $e->getMessage()
+        ];
+    }
 }
 
 function requestProcessor($request) {
@@ -171,6 +184,9 @@ function requestProcessor($request) {
             return listBundleVersions($request['payload']['bundle_name']);
         case "ROLLBACK_TO_VERSION":
             return buildResponse("ROLLBACK_TO_VERSION", "NOT_IMPLEMENTED", []);
+        case "logToQueue":
+            return logToQueue($request['payload']);
+            
     }
 
     return buildResponse($request['type'], "UNKNOWN", ["message" => "Unhandled type"]);
