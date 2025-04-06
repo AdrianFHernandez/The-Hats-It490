@@ -184,7 +184,7 @@ function requestProcessor($request) {
             return listBundleVersions($request['payload']['bundle_name']);
         case "ROLLBACK_TO_VERSION":
             return buildResponse("ROLLBACK_TO_VERSION", "NOT_IMPLEMENTED", []);
-        case "logToQueue":
+        case "LOG_TO_QUEUE":
             return logToQueue($request['payload']);
             
     }
