@@ -68,28 +68,6 @@ function addNewBundle($bundleInfo) {
     $cmd = "sshpass -p {$password} scp  {$remoteHost}:{$bundle_location} $bundlePath";
     exec($cmd, $output, $code);
 
-    if ($code !== 0) {
-        // Log the error
-        logToQueue([
-            'timestamp' => date('c'),
-            'log_type' => 'ERROR',
-            'message' => "SCP failed: " . implode("\n", $output),
-            'source' => 'Deployment Server',
-            'bundle_name' => $bundleInfo['bundle_name'],
-            'version' => $bundleInfo['version']
-        ]);
-        return buildResponse("ADD_NEW_BUNDLE", "ERROR", ["message" => "SCP failed: " . implode("\n", $output)]);
-    }
-
-    // Log the success
-    logToQueue([
-        'timestamp' => date('c'),
-        'log_type' => 'INFO',
-        'message' => "Successfully deployed {$filename} to the server.",
-        'source' => 'Deployment Server',
-        'bundle_name' => $bundleInfo['bundle_name'],
-        'version' => $bundleInfo['version']
-    ]);
 
     // Continue with adding the bundle to the database...
     $stmt = $mysqli->prepare("INSERT INTO Bundles (bundle_name, version, status, file_path) VALUES (?, ?, 'NEW', ?)");
@@ -126,43 +104,6 @@ function listBundleVersions($bundleName) {
     return buildResponse("LIST_BUNDLE_VERSIONS", "SUCCESS", ["versions" => $versions]);
 }
 
-function logToQueue($logData) {
-    // Validate the input before doing anything
-    if (!isset($logData['level']) || !isset($logData['message'])) {
-        return [
-            "status" => "error",
-            "message" => "Missing required log fields: 'level' and/or 'message'."
-        ];
-    }
-
-    try {
-        $connection = new AMQPStreamConnection('100.96.178.79', 5672, 'hats', 'it490@123', 'hatshost');
-        $channel = $connection->channel();
-        $channel->exchange_declare('log_broadcast', 'fanout', false, true, false);
-        $logMessage = new AMQPMessage(json_encode($logData), [
-            'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT
-        ]);
-
-        $channel->basic_publish($logMessage, 'log_broadcast');
-
-        $channel->queue_declare('log_queue', false, true, false, false);
-        $channel->basic_publish($logMessage, '', 'log_queue');
-
-        $channel->close();
-        $connection->close();
-
-        return [
-            "status" => "success",
-            "message" => "Log sent to queue and exchange."
-        ];
-    } catch (Exception $e) {
-        return [
-            "status" => "error",
-            "message" => "Failed to log: " . $e->getMessage()
-        ];
-    }
-}
-
 function requestProcessor($request) {
     if (!isset($request['type'])) {
         return buildResponse("UNKNOWN", "ERROR", ["message" => "Missing type"]);
@@ -184,8 +125,6 @@ function requestProcessor($request) {
             return listBundleVersions($request['payload']['bundle_name']);
         case "ROLLBACK_TO_VERSION":
             return buildResponse("ROLLBACK_TO_VERSION", "NOT_IMPLEMENTED", []);
-        case "LOG_TO_QUEUE":
-            return logToQueue($request['payload']);
             
     }
 
