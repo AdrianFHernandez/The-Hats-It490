@@ -2,43 +2,58 @@
 <?php
 require_once __DIR__ . '/vendor/autoload.php';
 use PhpAmqpLib\Connection\AMQPStreamConnection;
-use PhpAmqpLib\Message\AMQPMessage;
-
-require_once 'rabbitMQLib.inc';
-require_once 'lib/modules.php';
 
 function logConsumer($msg) {
     $logData = json_decode($msg->body, true);
     
+    if (!$logData) {
+        echo "[ERROR] Invalid log message.\n";
+        return;
+    }
+
+    $timestamp = $logData['timestamp'] ?? date('c');
+    $source = $logData['source'] ?? 'Unknown';
+    $bundle = $logData['bundle_name'] ?? 'Unknown Bundle';
+    $version = $logData['version'] ?? 'N/A';
+    $type = strtoupper($logData['log_type'] ?? 'INFO');
+    $message = $logData['message'] ?? 'No message.';
+
+    $logLine = "[$timestamp] [$type] [$source] [$bundle] v$version: $message\n";
+
     // Store log to a file
     $logFile = '/var/log/deployment_logs.log';
-    file_put_contents($logFile, json_encode($logData) . PHP_EOL, FILE_APPEND);
+    file_put_contents($logFile, $logLine, FILE_APPEND);
 
-    echo "Received log: " . json_encode($logData) . PHP_EOL;
+    echo "Received log: $logLine";
 }
 
 $connection = new AMQPStreamConnection(
-    '100.96.178.79',    // or the RabbitMQ server's IP
-    5672,           // default port
-    'hats',         // username
-    'it490@123', 
-    'hatsHost'             
+    '100.96.178.79',
+    5672,
+    'hats',
+    'it490@123',
+    'hatshost'
 );
 $channel = $connection->channel();
-$channel->queue_declare('log_queue', false, true, false, false);
 
-$callback = function($msg) {
-    logConsumer($msg);
-};
+// Declare the fanout exchange
+$channel->exchange_declare('log_broadcast', 'fanout', false, true, false);
 
-$channel->basic_consume('log_queue', '', false, true, false, false, $callback);
+// Declare a unique, exclusive, autodelete queue
+list($queue_name,,) = $channel->queue_declare("", false, false, true, false);
 
+// Bind it to the fanout exchange
+$channel->queue_bind($queue_name, 'log_broadcast');
+
+// Start consuming
 echo "Waiting for logs...\n";
-while($channel->is_consuming()) {
+$channel->basic_consume($queue_name, '', false, true, false, false, 'logConsumer');
+
+// Event loop
+while ($channel->is_consuming()) {
     $channel->wait();
 }
 
 $channel->close();
 $connection->close();
-
 ?>
