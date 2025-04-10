@@ -25,38 +25,17 @@ function installBundle($bundleZip, $sudoPassword = '') {
     $config = parse_ini_file($iniPath, true);
     $results = [];
 
-    if (isset($config['bundle']['version'])) {
-        $bundle_name = $config['bundle']['name'];
-        $version = $config['bundle']['version'];
-        $versionDir = "/home/installed_bundles";
-        $versionFile = "$versionDir/{$bundle_name}.txt";
     
-        // A directory to store the version info
-        if (!is_dir($versionDir)) {
-            $mkdirCmd = "sudo mkdir -p " . escapeshellarg($versionDir);
-            exec($mkdirCmd, $mkdirOut, $mkdirCode);
-            if ($mkdirCode !== 0) {
-                exec("rm -rf " . escapeshellarg($tmpDir));
-                return ["error" => "Failed to create installed_bundles directory"];
-            }
-        }
-    
-        // Write the version info to the file 
-        $writeCmd = "echo 'Current Version: $bundle_name $version' | sudo tee " . escapeshellarg($versionFile) . " > /dev/null";
-        exec($writeCmd, $out, $code);
-        if ($code !== 0) {
-            exec("rm -rf " . escapeshellarg($tmpDir));
-            return ["error" => "Failed to save version"];
-        }
-    
-        $results[] = "Saved version to $versionFile: $bundle_name $version";
-    }
     
 
     if (isset($config['commands']['execute'])) {
         $cmds = is_array($config['commands']['execute']) ? $config['commands']['execute'] : [$config['commands']['execute']];
         foreach ($cmds as $cmd) {
             exec($cmd, $out, $code);
+            if ($code !== 0) {
+                exec("rm -rf " . escapeshellarg($tmpDir));
+                return ["error" => "Failed to execute command: $cmd"];
+            }
             $results[] = "Executed: $cmd (exit code: $code)";
         }
     }
@@ -66,6 +45,10 @@ function installBundle($bundleZip, $sudoPassword = '') {
         foreach ($sudoCmds as $cmd) {
             $safeCmd = "echo " . escapeshellarg($sudoPassword) . " | sudo -S bash -c " . escapeshellarg($cmd);
             exec($safeCmd, $out, $code);
+            if ($code !== 0) {
+                exec("rm -rf " . escapeshellarg($tmpDir));
+                return ["error" => "Failed to execute sudo command: $cmd"];
+            }
             $results[] = "SUDO Executed: $cmd (exit code: $code)";
         }
     }
@@ -75,12 +58,52 @@ function installBundle($bundleZip, $sudoPassword = '') {
         foreach ($procs as $proc) {
             $bounceCmd = "echo " . escapeshellarg($sudoPassword) . " | sudo -S systemctl restart " . escapeshellarg($proc);
             exec($bounceCmd, $out, $code);
+            if ($code !== 0) {
+                exec("rm -rf " . escapeshellarg($tmpDir));
+                return ["error" => "Failed to restart process: $proc"];
+            }
             $results[] = "Restarted process: $proc (exit code: $code)";
         }
     }
+
+    if (isset($config['bundle']['version'])) {
+        $bundle_name = $config['bundle']['name'];
+        $version = $config['bundle']['version'];
+        $hostname = gethostname();
+        $versionDir = "/home/$hostname/installed_bundles_versions";
+        $versionFile = "$versionDir/{$bundle_name}.txt";
+    
+        // A directory to store the version info
+        if (!is_dir($versionDir)) {
+            $mkdirCmd = "mkdir -p " . escapeshellarg($versionDir);
+            exec($mkdirCmd, $mkdirOut, $mkdirCode);
+            if ($mkdirCode !== 0) {
+                exec("rm -rf " . escapeshellarg($tmpDir));
+                return ["error" => "Failed to create installed_bundles directory"];
+            }
+        }
+    
+        
+        $writeCmd = "echo 'Current Version: $bundle_name $version' > " . escapeshellarg($versionFile);
+        exec($writeCmd, $out, $code);
+        if ($code !== 0) {
+            exec("rm -rf " . escapeshellarg($tmpDir));
+            return ["error" => "Failed to save version"];
+        }
+    
+        $results[] = "Saved version to $versionFile: $bundle_name $version";
+    }
+
     chdir("/home");
     exec("rm -rf " . escapeshellarg($tmpDir));
     $results[] = "Cleaned up temp folder: $tmpDir";
 
     return ["status" => "success", "messages" => $results];
+
+
 }
+
+// print_r(installBundle("/home/QA-DB/deploy_archive/login_pkg_v1.zip", "it490")); Testing Purpose
+?>
+
+
