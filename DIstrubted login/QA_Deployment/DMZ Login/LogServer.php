@@ -24,13 +24,20 @@ require_once("rabbitMQLoggingLib.inc");
 }*/
 
 function requestProcessor($request) {
-    // log path
-    $logFile = "/home/Deployment/DistributedLogin/qadistributed_dmz_login.log";
+    // Base log file paths
+    $logDir = "/home/Deployment/DistributedLogin/";
+    $logFile = $logDir . "qadistributed_dmz_login.log";
+    $errorLogFile = $logDir . "errorqadistributed_dmz_login.log";
+
     $timestamp = date("D M d H:i:s Y");
     $logEntry = "[$timestamp] " . json_encode($request) . "\n";
 
-    
-    file_put_contents($logFile, $logEntry, FILE_APPEND);
+    // Determine where to log
+    if (isset($request['type']) && $request['type'] === "Error") {
+        file_put_contents($errorLogFile, $logEntry, FILE_APPEND);
+    } else {
+        file_put_contents($logFile, $logEntry, FILE_APPEND);
+    }
 
     // Now proceed with request handling
     print_r($request);
@@ -47,6 +54,7 @@ function requestProcessor($request) {
 
     return buildResponse($request['type'], "UNKNOWN", ["message" => "Unhandled type"]);
 }
+
 
 echo "QA Login Server Started\n";
 $server = new rabbitMQServer("QADistributedLogginRabbitMQ.ini", "QADistributedLogginServer");
