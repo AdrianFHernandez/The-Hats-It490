@@ -49,7 +49,7 @@ function deployBundle($env, $bundleName, $version)
     $configFile = ($env === "prod") ? "ProdInstallRabbitMQ.ini" : "QAInstallRabbitMQ.ini";
     $listener = strtoupper($env) . strtoupper($bundleType) . "InstallListener";
 
-    file_put_contents("passing.txt", $listener); // Debug log
+    // file_put_contents("passing.txt", $listener); // Debug log
     $client = new rabbitMQClient($configFile, $listener);
     $response = $client->send_request($request);
 
