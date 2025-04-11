@@ -71,7 +71,7 @@ function addNewBundle($bundleInfo) {
 
     // Using key-based SCP
     $cmd = "scp -o StrictHostKeyChecking=no {$remoteHost}:{$bundle_location} {$bundlePath}";
-    file_put_contents("passing.txt", $cmd);
+    // file_put_contents("passing.txt", $cmd);
     exec($cmd, $output, $code);
 
     if ($code !== 0) {
