@@ -41,6 +41,9 @@ function LoginPage() {
 
   return (
     <div>
+         <h2 className="mb-3">InvestZero!</h2>
+        <h4 className="mb-4">Practice investing for free and learn to grow your wealth!</h4>
+
       <h1>Welcome to InvestZero!</h1>
       <h2>Please Login</h2>
       {error && <div><h3>{error}</h3></div>}
@@ -63,7 +66,8 @@ function LoginPage() {
             required
           />
         </div>
-        <button type="submit">Login</button>
+        <button type="submit" class="btn btn-success mt-2 px-5" >LOGIN</button>
+        
     
       </form>
     </div>

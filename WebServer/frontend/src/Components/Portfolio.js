@@ -1,116 +1,82 @@
-import React from "react";
-import { useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import StockDiversityChart from "./StockDiversityChart";
-import { Container } from "react-bootstrap";
+import { Container, Row, Col, Table } from "react-bootstrap";
 
 function Portfolio({ userAccount }) {
   const [selectedTicker, setSelectedTicker] = useState(null);
   const navigate = useNavigate();
 
-  if (!userAccount) return <p>Loading portfolio...</p>;
-  console.log("userAccount: inside Portfolio", userAccount);
+  if (!userAccount) return <p className="text-center">Loading portfolio...</p>;
 
   const onSelectTicker = (ticker) => {
-    console.log(`Switching to ticker: ${ticker}`);
     navigate(`/chartpage/${ticker}`);
   };
 
+  const { cashBalance, stockBalance, totalBalance } = userAccount.userBalance;
+
   return (
-    <Container style={styles.container}>
-      {/* Center both Account Balance and Pie Chart */}
-      <div style={styles.balanceAndChartContainer}>
-        <div style={styles.chartContainer}>
-          <StockDiversityChart userStocks={userAccount?.userStocks} />
-        </div>
+    <Container fluid className="py-4">
+      <Row className="justify-content-center text-center mb-4 align-items-center">
+        {/* Chart */}
+        <Col xs={12} lg={6} className="mb-4 mb-lg-0">
+          <StockDiversityChart userStocks={userAccount.userStocks} />
+        </Col>
 
-        <div style={styles.balanceContainer}>
-          <h2>Account Balance</h2>
-          <p><strong>Buying Power:</strong> ${parseFloat(userAccount.userBalance.cashBalance).toFixed(2)}</p>
-          <p><strong>Stock Balance:</strong> ${parseFloat(userAccount.userBalance.stockBalance).toFixed(2)}</p>
-          <p><strong>Total Balance:</strong> ${parseFloat(userAccount.userBalance.totalBalance).toFixed(2)}</p>
-        </div>
-      </div>
+        {/* Account Balance */}
+        <Col xs={12} lg={6} className="d-flex align-items-center justify-content-center">
+          <div className="card bg-dark text-white border-primary shadow-sm w-100" style={{ maxWidth: "400px" }}>
+            <div className="card-header bg-primary text-white text-center">
+              <h5 className="mb-0">Account Balance</h5>
+            </div>
+            <div className="card-body text-center">
+              <p className="mb-2"><strong>Buying Power:</strong> ${parseFloat(cashBalance).toFixed(2)}</p>
+              <p className="mb-2"><strong>Stock Balance:</strong> ${parseFloat(stockBalance).toFixed(2)}</p>
+              <p className="mb-0"><strong>Total Balance:</strong> ${parseFloat(totalBalance).toFixed(2)}</p>
+            </div>
+          </div>
+        </Col>
+      </Row>
 
-      {/* Owned Stocks Section */}
-      <div style={styles.stocksContainer}>
-        <h2>Owned Stocks</h2>
-        {Object.keys(userAccount.userStocks).length === 0 ? (
-          <p>No stocks owned</p>
-        ) : (
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={styles.th}>Stock</th>
-                <th style={styles.th}>Company Name</th>
-                <th style={styles.th}>Count</th>
-                <th style={styles.th}>Average Price</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.entries(userAccount.userStocks).map(([ticker, stock]) => (
-                <tr key={ticker}>
-                  <td
-                    style={{ ...styles.td, cursor: "pointer", color: "blue" }}
-                    onClick={() => onSelectTicker(ticker)}
-                  >
-                    {ticker}
-                  </td>
-                  <td style={styles.td}>{stock.companyName || "N/A"}</td>
-                  <td style={styles.td}>{stock.count}</td>
-                  <td style={styles.td}>${parseFloat(stock.averagePrice).toFixed(2) || "N/A"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      {/* Owned Stocks Table */}
+      <Row className="justify-content-center">
+        <Col xs={12} lg={10}>
+          <h2 className="text-center mb-3 text-light">Owned Stocks</h2>
+          {Object.keys(userAccount.userStocks).length === 0 ? (
+            <p className="text-center text-muted">No stocks owned</p>
+          ) : (
+            <div className="table-responsive">
+              <Table striped bordered hover variant="dark" className="text-center">
+                <thead className="table-primary">
+                  <tr>
+                    <th>Stock</th>
+                    <th>Company Name</th>
+                    <th>Count</th>
+                    <th>Average Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(userAccount.userStocks).map(([ticker, stock]) => (
+                    <tr key={ticker}>
+                      <td
+                        style={{ cursor: "pointer", color: "lightblue" }}
+                        onClick={() => onSelectTicker(ticker)}
+                      >
+                        {ticker}
+                      </td>
+                      <td>{stock.companyName || "N/A"}</td>
+                      <td>{stock.count}</td>
+                      <td>${parseFloat(stock.averagePrice).toFixed(2) || "N/A"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </div>
+          )}
+        </Col>
+      </Row>
     </Container>
   );
 }
-
-const styles = {
-  container: {
-    width: "80%",
-    margin: "20px auto",
-    padding: "20px",
-    backgroundColor: "#f9f9f9",
-    borderRadius: "10px",
-    boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
-    fontFamily: "Arial, sans-serif",
-  },
-  balanceAndChartContainer: {
-    display: "flex",
-    justifyContent: "center", // Centers both items
-    alignItems: "center",
-    gap: "50px", // Adds spacing between chart and balance
-    width: "100%",
-    textAlign: "center",
-  },
-  chartContainer: {
-    flex: 1,
-    maxWidth: "300px",
-  },
-  balanceContainer: {
-    flex: 1,
-    textAlign: "center", // Centers the text within
-  },
-  stocksContainer: {
-    marginTop: "20px",
-  },
-  table: {
-    width: "100%",
-    borderCollapse: "collapse",
-  },
-  th: {
-    borderBottom: "2px solid #ddd",
-    padding: "8px",
-  },
-  td: {
-    borderBottom: "1px solid #ddd",
-    padding: "8px",
-    textAlign: "center",
-  },
-};
 
 export default Portfolio;
