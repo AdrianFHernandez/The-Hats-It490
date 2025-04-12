@@ -121,6 +121,9 @@ function RegisterPage(props) {
 
     return (
         <div>
+        <h2 className="mb-3">InvestZero!</h2>
+        <h4 className="mb-4">Practice investing for free and learn to grow your wealth!</h4>
+
             <h1>Welcome to InvestZero!</h1>
             <h2>Please Register</h2>
             
@@ -172,7 +175,7 @@ function RegisterPage(props) {
                 </div>
                 <div>
                     <input
-                        id="password"
+                        id="password_verify"
                         value={confirmPassword}
                         type = {visible ? "text": "password"}
                         placeholder="Confirm Password"
@@ -192,7 +195,7 @@ function RegisterPage(props) {
                 {error && <p style={{ color: "red" }}>{error}</p>}
                 {success && <p style={{ color: "green" }}>{success}</p>}
 
-                <button type="submit">Register</button>
+                <button type="submit" class="btn btn-success mt-2 px-5" >REGISTER</button>
             </form>
         </div>
     );

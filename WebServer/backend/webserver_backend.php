@@ -2,7 +2,8 @@
 // CORS Headers
 $allowed_origins = [
     "localhost:3000",
-    'https://localhost',
+    'https://localhost:3000',
+    'http://localhost:3000',
     'https://www.sample.com',
     "https://100.76.155.76",
 ];
