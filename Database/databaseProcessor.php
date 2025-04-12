@@ -19,14 +19,14 @@ function requestProcessor($request)
 
     switch ($request['type']) {
         case "REGISTER":
-            return doRegister($request['payload']['name'], $request['payload']['username'], $request['payload']['email'], $request['payload']['password']);
+            return doRegister($request['payload']['name'], $request['payload']['username'], $request['payload']['email'], $request['payload']['password'], $request["payload"]["phone"]);
         case "LOGIN":
             $response = doLogin($request['payload']['username'],$request['payload']['password']);
-            if ($response["status"] === "SUCCESS") {
-                $sessionData = createSession($response["payload"]["user"]["id"]);
-                $response["payload"]["session"] = $sessionData;
-                clearExpiredSessions();
-            }
+            // if ($response["status"] === "SUCCESS") {
+            //     $sessionData = createSession($response["payload"]["user"]["id"]);
+            //     $response["payload"]["session"] = $sessionData;
+            //     clearExpiredSessions();
+            // }
             return $response;
         case "VALIDATE_SESSION":
             return validateSession($request['payload']['sessionId']);
@@ -42,7 +42,15 @@ function requestProcessor($request)
             return performTransaction($request["payload"]['sessionId'], $request["payload"]['ticker'], $request["payload"]['quantity'], $request["payload"]['price'], $request["payload"]['type']);
         case "FETCH_SPECIFIC_STOCK_DATA":
             return fetchSpecificStockData($request["payload"]['sessionId'], $request["payload"]['ticker'], $request["payload"]['start'], $request["payload"]['end']);
-            default:
+        case "VERIFY_OTP":
+            $response = verifyOTP($request["payload"]['OTP_code']);
+            if ($response["status"] === "SUCCESS") {
+                $sessionData = createSession($response["payload"]["user"]["id"]);
+                $response["payload"]["session"] = $sessionData;
+                clearExpiredSessions();
+            }
+            return $response;    
+        default:
             return buildResponse("ERROR", "FAILED", ["message" => "Invalid request type"]);
     }
 }
