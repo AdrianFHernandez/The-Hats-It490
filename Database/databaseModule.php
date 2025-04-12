@@ -254,7 +254,7 @@ function doGetAccountInfo($sessionId)
 
     // Step 3: Fetch user's stock holdings
     $stmt = $conn->prepare("
-        SELECT p.ticker, s.name, s.description, p.quantity, p.average_price
+        SELECT p.ticker, s.name, s.description, p.quantity, p.average_price, s.price AS current_price
         FROM Portfolios p
         JOIN Stocks s ON p.ticker = s.ticker
         WHERE p.account_id = ?
@@ -272,16 +272,26 @@ function doGetAccountInfo($sessionId)
             "companyName" => $row['name'],
             "companyDescription" => $row['description'],
             "count" => $row['quantity'],
-            "averagePrice" => $row['average_price']
+            "averagePrice" => $row['average_price'],
+            "currentPrice" => $row['current_price']
         ];
-        // Add to stock balance (total value of stocks owned)
-        $stockBalance += $row['quantity'] * $row['average_price'];
+        
+        // Add to stock balance (total value of stocks owned based on current price)
+        $stockBalance += $row['quantity'] * $row['current_price'];
     }
 
     $stmt->close();
-    $conn->close();
 
-    // Step 4: Return response
+    // Calculate the total balance
+    $totalBalance = $cashBalance + $stockBalance;
+
+    // Step 4: Update the total_balance in the database
+    $stmt = $conn->prepare("UPDATE Accounts SET total_balance = ? WHERE account_id = ?");
+    $stmt->bind_param("di", $totalBalance, $accountId);
+    $stmt->execute();
+    $stmt->close();
+
+    // Step 5: Return response
     return buildResponse("GET_ACCOUNT_INFO_RESPONSE", "SUCCESS", [
         "data" => ["user" => [
             "userStocks" => $userStocks,

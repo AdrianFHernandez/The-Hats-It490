@@ -60,7 +60,7 @@ function App() {
 
   return (
     <Router basename="/">
-      <div className="App text-center w-100 d-flex flex-column justify-content-center align-items-center">
+      <div className="App text-center w-100">
       {loading ? (
           <div className="d-flex justify-content-center align-items-center" style={{ height: '100vh' }}>
             <div>Loading...</div>

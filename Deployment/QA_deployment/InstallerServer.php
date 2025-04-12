@@ -19,6 +19,7 @@ function requestProcessor($request) {
             return ["error" => "Failed to create bundle directory: $local_path"];
         }
     }
+    
     if (!isset($remote_hostname) || !isset($remote_host_ip) || !isset($local_path)) {
         return ["status" => "error", "message" => "Server configuration error in InstallerServer.php"];
     }
