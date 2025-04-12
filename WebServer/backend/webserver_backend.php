@@ -1,12 +1,23 @@
 <?php
 // CORS Headers
-header('Access-Control-Allow-Origin: http://localhost:3000'); // Update if frontend is deployed
-header('Access-Control-Allow-Credentials: true');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
-header('Content-Type: application/json');
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
+$allowed_origins = [
+    "localhost:3000",
+    'https://localhost',
+    'https://www.sample.com',
+    "https://100.76.155.76",
+];
+
+if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
+    header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
+    header("Access-Control-Allow-Credentials: true");
+    header("Access-Control-Allow-Methods: POST, OPTIONS");
+    header("Access-Control-Allow-Headers: Content-Type, Authorization");
+    header("Content-Type: application/json");
+} else {
+    http_response_code(403);
+    echo json_encode(['error' => 'Unauthorized origin']);
+    exit;
+}
 
 // Handle preflight request
 if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
@@ -23,6 +34,9 @@ require_once('rabbitMQLib.inc');
 
 
 require_once(__DIR__ . '/vendor/autoload.php');
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
 
 // Decode incoming JSON request
 $data = json_decode(file_get_contents("php://input"), true);
@@ -322,6 +336,7 @@ function handlePerformTransaction($data) {
         echo json_encode(["error" => $response["payload"]["message"] ?? "Transaction failed"]);
     }
 }
+
 
 function handleGetStockInfo($data){
     $ticker = $data["ticker"] ?? '';
