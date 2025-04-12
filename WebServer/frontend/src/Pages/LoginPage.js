@@ -7,10 +7,6 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
- 
-
-
-
   const handleSubmission = async (event) => {
     event.preventDefault();
 
@@ -25,10 +21,8 @@ function LoginPage() {
       window.alert("Login Response:", JSON.stringify(response.data));
 
       if (response.data.success) {
-
         window.alert("Login successful!");
         window.location.href = "/home";
-
       } else {
         setError("Login failed. Please try again.");
       }
@@ -41,12 +35,27 @@ function LoginPage() {
 
   return (
     <div>
-         <h2 className="mb-3">InvestZero!</h2>
-        <h4 className="mb-4">Practice investing for free and learn to grow your wealth!</h4>
+      <div className="mt-5">
+        <h1
+          className="mb-3 fw-bold text-center text-truncate"
+          style={{ maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden" }}
+        >
+          Welcome to InvestZero!
+        </h1>
+        <h4
+          className="mb-4 w-100 text-center fs-6 text-light"
+          style={{ maxWidth: "80%", margin: "0 auto" }}
+        >
+          Practice investing for free and learn to grow your wealth!
+        </h4>
 
-      <h1>Welcome to InvestZero!</h1>
-      <h2>Please Login</h2>
-      {error && <div><h3>{error}</h3></div>}
+        <h2 className="my-4 ">Please LOGIN</h2>
+      </div>
+      {error && (
+        <div>
+          <h3>{error}</h3>
+        </div>
+      )}
       <form onSubmit={handleSubmission}>
         <div>
           <input
@@ -66,9 +75,9 @@ function LoginPage() {
             required
           />
         </div>
-        <button type="submit" class="btn btn-success mt-2 px-5" >LOGIN</button>
-        
-    
+        <button type="submit" className="btn btn-success mt-2 px-5">
+          LOGIN
+        </button>
       </form>
     </div>
   );
