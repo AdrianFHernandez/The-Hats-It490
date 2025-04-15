@@ -8,7 +8,7 @@ function installBundle($bundleZip, $sudoPassword = '') {
     $tmpDir = "/tmp/bundle_install_" . uniqid();
     mkdir($tmpDir, 0777, true);
 
-    $unzipCmd = "unzip -q " . escapeshellarg($bundleZip) . " -d " . escapeshellarg($tmpDir);
+    $unzipCmd = "unzip -q -j " . escapeshellarg($bundleZip) . " -d " . escapeshellarg($tmpDir);
     exec($unzipCmd, $out, $code);
     if ($code !== 0) {
         exec("rm -rf " . escapeshellarg($tmpDir));

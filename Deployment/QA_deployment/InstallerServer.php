@@ -5,8 +5,8 @@ require_once("lib/rabbitMQLib.inc");
 require_once("lib/installer.php");
 require_once("lib/perform_scp.php");
 
-$remote_hostname = "QA-DB";
-$remote_host_ip = "100.76.155.76";
+$remote_hostname = "Deployment";
+$remote_host_ip = "100.95.180.45";
 $hostname = gethostname();
 $local_path = "/home/$hostname/bundles_from_deployment_server/";
 
@@ -23,7 +23,7 @@ function requestProcessor($request) {
         return ["status" => "error", "message" => "Server configuration error in InstallerServer.php"];
     }
 
-    print_r($request);
+    // print_r($request);
     if (!isset($request['type']) || $request['type'] !== "INSTALL_BUNDLE") {
         return ["status" => "error", "message" => "Invalid request type"];
     }
