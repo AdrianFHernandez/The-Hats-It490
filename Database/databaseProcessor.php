@@ -9,7 +9,7 @@ require_once('databaseModule.php');
 
 function requestProcessor($request)
 {
-    echo "received request".PHP_EOL;
+    echo "received request - Yes".PHP_EOL;
     var_dump($request);
 
     
