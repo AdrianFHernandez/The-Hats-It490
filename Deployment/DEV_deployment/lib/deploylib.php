@@ -86,6 +86,37 @@ function markStatus($bundleName, $version, $status)
     ]);
 }
 
+function zip_bundles($inputs, $zipName){
+    
+    $zipPath = $zipName;
+
+    $cmds = [];
+  
+    foreach ($inputs as $input) {
+        $realPath = realpath($input);
+        if (!$realPath) {
+            echo "Skipping missing path: $input\n";
+            continue;
+        }
+    
+        if (is_dir($realPath)) {
+            $parentDir = dirname($realPath);
+            $folderName = basename($realPath);
+            // cd into parent dir, zip only the folder
+            $cmds[] = "(cd " . escapeshellarg($parentDir) . " && zip -r -q " . escapeshellarg($zipPath) . " " . escapeshellarg($folderName) . ")";
+        } elseif (is_file($realPath)) {
+            $parent = dirname($realPath);
+            $basename = basename($realPath);
+            $cmds[] = "(cd " . escapeshellarg($parent) . " && zip -q " . escapeshellarg($zipPath) . " " . escapeshellarg($basename) . ")";
+        }
+    }
+    
+    $finalCmd = implode(" && ", $cmds);
+    
+    exec($finalCmd, $output, $exitCode);
+    
+    return $exitCode;
+}
 
 function createAndRegisterBundle($bundleName, $hostType, $sourceDir)
 {
@@ -121,38 +152,40 @@ function createAndRegisterBundle($bundleName, $hostType, $sourceDir)
 
     $filesToInclude = $config['files']['include'];
     if (!is_array($filesToInclude)) {
-        $filesToInclude = [$filesToInclude]; // single entry case
+        $filesToInclude = [$filesToInclude]; 
     }
 
     // Check all files exist
     $missingFiles = [];
+    $resolvedInputs = [];
 
     foreach ($filesToInclude as $file) {
+        $file = rtrim($file, '/');
+        
         if (strpos($file, '/') === 0 || strpos($file, '~') === 0) {
             $fullPath = ($file[0] === '~') ? str_replace('~', getenv('HOME'), $file) : $file;
         } else {
             $fullPath = $sourceDir . '/' . $file;
         }
-
-        if (!file_exists($fullPath)) {
+    
+        
+        if (!$fullPath || !file_exists($fullPath)) {
             $missingFiles[] = $file;
+        } else {
+            $resolvedInputs[] = $fullPath;
         }
     }
-
+    
 
     if (!empty($missingFiles)) {
         return ["error" => "Missing files: " . implode(', ', $missingFiles)];
     }
 
-    $filesToInclude = array_map(function ($f) {
-        return rtrim($f, '/');
-    }, $filesToInclude);
-
-    if (in_array('./', $filesToInclude)) {
-        $filesToInclude = ['./'];
-    }
+    // Add bundle.ini itself
+    $resolvedInputs[] = $bundleIniPath;
 
     $versionResponse = getNextVersion($bundleName);
+    // $versionResponse = ["status" => "SUCCESS", "payload" => ["version" => "1.0.0"]]; // Mocked response for testing
     if ($versionResponse['status'] !== "SUCCESS") {
         return ["error" => "Failed to get version"];
     }
@@ -161,21 +194,18 @@ function createAndRegisterBundle($bundleName, $hostType, $sourceDir)
     $zipName = "{$bundleName}_v{$version}.zip";
     $zipPath = $bundleDir . "/" . $zipName;
 
-    // Save the version in the bundle.ini
+    // Save version to bundle.ini
     $config['bundle']['version'] = $version;
-
-    // Save the updated INI file
     file_put_contents($bundleIniPath, build_ini_string($config));
-
-    // Create the zip
-    $tmpZipCmd = "cd $sourceDir && zip -r $zipPath " . " bundle.ini " . implode(" ", array_map('escapeshellarg', $filesToInclude));
-    exec($tmpZipCmd, $output, $code);
-    if ($code !== 0) {
-        return ["error" => "Failed to create zip: " . implode("\n", $output)];
+    
+    
+    $exitCode = zip_bundles($resolvedInputs, $zipPath);
+    if ($exitCode !== 0) {
+        return ["error" => "Failed to create zip bundle"];
     }
 
-    $registerResponse = addNewBundle($bundleName, $hostType, $zipPath, $version);
-    return $registerResponse;
+    
+    return addNewBundle($bundleName, $hostType, $zipPath, $version);
 }
 
 function createAndRegisterBundleFromIni($sourceDir)
@@ -198,3 +228,8 @@ function createAndRegisterBundleFromIni($sourceDir)
     $hostType = strtolower($config['bundle']['host_type']);
     return createAndRegisterBundle($bundleName, $hostType, $sourceDir);
 }
+
+
+
+print_r(createAndRegisterBundle("testBundle", "web", "./../"));
+?>
