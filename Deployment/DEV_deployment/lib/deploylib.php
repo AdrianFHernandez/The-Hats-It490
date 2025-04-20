@@ -211,8 +211,8 @@ function createAndRegisterBundle($bundleName, $hostType, $sourceDir)
     if ($exitCode !== 0) {
         return ["error" => "Failed to create zip bundle"];
     }
-    echo "Bundle created: $zipPath\n";
-    // return addNewBundle($bundleName, $hostType, $zipPath, $version);
+    // echo "Bundle created: $zipPath\n";
+    return addNewBundle($bundleName, $hostType, $zipPath, $version);
 }
 
 

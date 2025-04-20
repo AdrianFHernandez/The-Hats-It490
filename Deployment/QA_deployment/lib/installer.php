@@ -1,8 +1,9 @@
 <?php
 
 function installBundle($bundleZip, $sudoPassword = '') {
-    if (!file_exists($bundleZip)) {
-        return ["error" => "Bundle not found: $bundleZip"];
+    $bundleZip = realpath($bundleZip);
+     if ($bundleZip === false || pathinfo($bundleZip, PATHINFO_EXTENSION) !== 'zip') {
+    return ["error" => "Invalid or non-zip bundle path"];
     }
 
     $tmpDir = "/tmp/bundle_install_" . uniqid();
@@ -26,6 +27,7 @@ function installBundle($bundleZip, $sudoPassword = '') {
     $results = [];
 
     $user = getenv('SUDO_USER') ?: getenv('USER');
+    $user = preg_replace('/[^a-zA-Z0-9_-]/', '', $user);
     $vars = ['USER' => $user];
 
     $replacePlaceholders = function ($cmd) use ($vars) {
