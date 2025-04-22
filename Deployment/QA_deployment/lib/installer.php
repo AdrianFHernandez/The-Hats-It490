@@ -2,8 +2,8 @@
 
 function installBundle($bundleZip, $sudoPassword = '') {
     $bundleZip = realpath($bundleZip);
-     if ($bundleZip === false || pathinfo($bundleZip, PATHINFO_EXTENSION) !== 'zip') {
-    return ["error" => "Invalid or non-zip bundle path"];
+     if (!file_exists($bundleZip) || pathinfo($bundleZip, PATHINFO_EXTENSION) !== 'zip') {
+    return ["error" => "Invalid or non-zip bundle path"];//sanitize path file
     }
 
     $tmpDir = "/tmp/bundle_install_" . uniqid();
@@ -24,11 +24,16 @@ function installBundle($bundleZip, $sudoPassword = '') {
     }
 
     $config = parse_ini_file($iniPath, true);
-    $results = [];
+    if (!$config){//sanitation added if file does not exist
+        return ["error"=>"Failed to parse bundle.ini"];
+    }
+    //$results = [];
 
     $user = getenv('SUDO_USER') ?: getenv('USER');
-    $user = preg_replace('/[^a-zA-Z0-9_-]/', '', $user);
-    $vars = ['USER' => $user];
+    if (!preg_match('/^[\w.-]+$/',$user)){
+        return["error"=>"Username contains unsafe characters"];
+    }//sanitization for any unsafe username input
+    $vars = ['USER'=>$user];
 
     $replacePlaceholders = function ($cmd) use ($vars) {
         foreach ($vars as $key => $val) {
@@ -64,9 +69,13 @@ function installBundle($bundleZip, $sudoPassword = '') {
         }
     }
 
+
+
+
     if (isset($config['processes']['bounce'])) {
         $procs = is_array($config['processes']['bounce']) ? $config['processes']['bounce'] : [$config['processes']['bounce']];
         foreach ($procs as $proc) {
+            $proc = preg_replace('/[^a-zA-Z0-9_.@-]/', '', $proc);//sanitize proc input
             $bounceCmd = "echo " . escapeshellarg($sudoPassword) . " | sudo -S systemctl restart " . escapeshellarg($proc);
             exec($bounceCmd, $out, $code);
             if ($code !== 0) {
