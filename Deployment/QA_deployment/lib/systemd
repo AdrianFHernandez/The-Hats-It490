@@ -1,0 +1,38 @@
+sudo nano /etc/systemd/system/deployment-server.service
+[Unit]
+Description=Deployment Server
+After=network.target rabbitmq-server.service
+Requires=rabbitmq-server.service
+
+[Service]
+User=
+Group=
+ExecStart=/usr/bin/php /home/"User"/git/The-Hats-It490/Deployment/DeploymentServer/DeploymentServer.php
+WorkingDirectory=/home/"User"/git/The-Hats-It490/Deployment/DeploymentServer/DeploymentServer.php
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
+
+-----------------------------------------------------------------------------------
+sudo nano /etc/systemd/system/log-server.service
+
+[Unit]
+Description=Log Server
+After=network.target rabbitmq-server.service
+Requires=rabbitmq-server.service
+
+[Service]
+User=
+Group=
+ExecStart=/usr/bin/php /home/"User"/git/The-Hats-It490/Deployment/logServer.php
+WorkingDirectory=/home/"User"/git/The-Hats-It490/Deployment/logServer.php
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
+
