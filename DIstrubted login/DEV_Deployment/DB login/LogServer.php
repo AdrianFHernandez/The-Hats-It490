@@ -3,38 +3,16 @@
 
 require_once("rabbitMQLoggingLib.inc");
 
-
-/*function requestProcessor($request) {
-
-    print_r($request);
-    if (!isset($request['type'])) {
-        return buildResponse("UNKNOWN", "ERROR", ["message" => "Missing type"]);
-    }
-
-
-    switch ($request['type']) {
-        case "Error":
-            return ["log"=>"ts"];
-         default:
-            break;
-            
-    }
-
-    return buildResponse($request['type'], "UNKNOWN", ["message" => "Unhandled type"]);
-}*/
-
-
-    $logDir = "/var/log/LogResponse";
-    $logFile = $logDir . "proddistributed_web_login.log";
-    $errorLogFile = $logDir . "errordevdistributed_db_login.err";
+    $logDir = "/var/log/";//cd /var/log/    sudo mkdir LogResponse"
+    $logFile = $logDir . "DistributedInvestZero.log";
+    $logError = $logDir . "DistributedInvestZero.err";
 
 function requestProcessor($request) {
     // Base log file paths
-    
-    global $logFile, $logError;
+   print_r($request); 
+	global $logFile, $logError;
     $timestamp = date("D M d H:i:s Y");
-    $logEntry = "[$timestamp] " . "--" .
-$request["message"] . "\n";
+    $logEntry = "[$timestamp] " . " -- " . $request["message"] . "\n";
 
     // Determine where to log
     if (isset($request['type']) && $request['type'] === "Error") {
@@ -42,21 +20,6 @@ $request["message"] . "\n";
     } else {
         file_put_contents($logFile, $logEntry, FILE_APPEND);
     }
-
-    // Now proceed with request handling
-    print_r($request);
-    if (!isset($request['type'])) {
-        return buildResponse("UNKNOWN", "ERROR", ["message" => "Missing type"]);
-    }
-
-    switch ($request['type']) {
-        case "Error":
-            return ["log" => "ts"];
-        default:
-            break;
-    }
-
-    return buildResponse($request['type'], "UNKNOWN", ["message" => "Unhandled type"]);
 }
 
 echo "DEV Login Server Started\n";
