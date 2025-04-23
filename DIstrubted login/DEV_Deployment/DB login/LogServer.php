@@ -42,7 +42,7 @@ function requestProcessor($request) {
 
     // Determine where to log
     if (isset($request['type']) && $request['type'] === "Error") {
-        file_put_contents($logError, $logEntry, FILE_APPEND);
+        file_put_contents($errorLogFile, $logEntry, FILE_APPEND);
     } else {
         file_put_contents($logFile, $logEntry, FILE_APPEND);
     }
