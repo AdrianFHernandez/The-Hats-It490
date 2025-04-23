@@ -1,11 +1,8 @@
 <?php
 // CORS Headers
 $allowed_origins = [
-    "localhost:3000",
     'https://localhost:3000',
-    'http://localhost:3000',
-    'http://www.sample.com',
-    "https://100.76.155.76",
+    "https://100.70.255.118"
 ];
 
 if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
@@ -164,10 +161,10 @@ function handleVerifyOTP($data) {
         setcookie("PHPSESSID", $session_id, [
             "expires" => $session_expires,
             "path" => "/",
-            "domain" => "www.sample.com",
-            "secure" => false, // change to false for http testing
-            "httponly" => true,
-            "samesite" => "lax" // lax
+            "domain" => "100.70.255.118",
+            "secure" => true, // change to false for http testing
+            "httponly" => false,
+            "samesite" => "None" // lax
         ]);
 
         echo json_encode([
@@ -209,10 +206,10 @@ function handleValidateSession() {
         setcookie("PHPSESSID", "", [
             "expires" => -1,
             "path" => "/",
-            "domain" => "www.sample.com",
-            "secure" => false,
-            "httponly" => true,
-            "samesite" => "lax"
+            "domain" => "100.70.255.118",
+            "secure" => true,
+            "httponly" => false,
+            "samesite" => "None"
         ]);
         echo json_encode(["valid" => false, "error" => "Invalid or expired sesasion"]);
     }
@@ -241,10 +238,10 @@ function handleLogout() {
         setcookie("PHPSESSID", "", [
             "expires" => -1,
             "path" => "/",
-            "domain" => "www.sample.com",
-            "secure" => false,
-            "httponly" => true,
-            "samesite" => "lax"
+            "domain" => "100.70.255.118",
+            "secure" => true,
+            "httponly" => false,
+            "samesite" => "None"
         ]);
         
         echo json_encode(["success" => true, "message" => $response['message']]);
