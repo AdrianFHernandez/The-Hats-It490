@@ -8,6 +8,7 @@ function RegisterPage(props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [visible, setVisible] = useState(false);
@@ -67,7 +68,14 @@ function RegisterPage(props) {
     }
     // Step 2: Prepare user data for PHP backend
 
-    const userData = { type: "REGISTER", name, username, email, password };
+    const userData = {
+      type: "REGISTER",
+      name,
+      username,
+      email,
+      password,
+      phone,
+    };
 
     try {
       console.log("Sending request to backend...", userData);
@@ -152,6 +160,24 @@ function RegisterPage(props) {
             required
           />
         </div>
+        <div>
+          <input
+            type="text"
+            value={phone}
+            placeholder="US Phone Number"
+            onChange={(e) => {
+              let input = e.target.value;
+              input = input.replace(/\D/g, ""); //Remove all non-digit characters
+
+              if (!input.startsWith("1")) {
+                input = "1" + input;
+              }
+              setPhone(`+${input}`);
+            }}
+            required
+          />
+        </div>
+
         <div>
           <input
             id="password"
