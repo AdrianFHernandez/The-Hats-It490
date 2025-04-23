@@ -5,6 +5,7 @@
 **/build/
 credentials
 
+apiKey
 # dependencies
 /node_modules
 /.pnp

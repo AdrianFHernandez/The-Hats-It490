@@ -1,0 +1,187 @@
+<?php
+require_once('path.inc');
+require_once('get_host_info.inc');
+require_once('rabbitMQLib.inc');
+
+// 3WE0LDXUCWaW7auFquUZB6UlN6BQ41sn
+function buildResponse($type, $status, $payload = [])
+{
+    return [
+        "type" => $type,
+        "timestamp" => time(),
+        "status" => $status,
+        "payload" => $payload
+    ];
+}
+
+$api_key = trim(file_get_contents("apiKey"));
+echo "Using API Key: " . substr($api_key, 0, 5) . "...\n"; 
+
+function fetchAllTickers()
+{
+    $url = "https://www.sec.gov/files/company_tickers.json";
+    $options = [
+        "http" => [
+            "header" => "User-Agent: MyTradingApp/1.0 (myemail@example.com)\r\n"
+        ]
+    ];
+
+    $context = stream_context_create($options);
+    $response = file_get_contents($url, false, $context);
+
+    if ($response === false) {
+        return buildResponse("FETCH_ALL_TICKERS_RESPONSE", "FAILED", ["message" => "Error fetching SEC company tickers"]);
+    }
+
+    // Convert JSON to PHP array
+    $data = json_decode($response, true);
+
+    if (!$data) {
+        return buildResponse("FETCH_ALL_TICKERS_RESPONSE", "FAILED", ["message" => "Failed to decode JSON data"]);
+    }
+
+    // Extract only ticker and title
+    $filteredData = [];
+    foreach ($data as $stock) {
+        $filteredData[] = [
+            "ticker" => $stock['ticker'],
+            "name" => $stock['title']
+        ];
+    }
+
+
+    return buildResponse("FETCH_ALL_TICKERS_RESPONSE", "SUCCESS", ["data" => $filteredData, "message" => "Sent tickers to databaseProcessor"]);
+}
+
+function fetch_specific_stock_chart_data($ticker, $start_date, $end_date) {
+    global $api_key;
+
+    // // Convert epoch timestamps to YYYY-MM-DD
+    // $start_date = date("Y-m-d", $start);
+    // $end_date = date("Y-m-d", $end);
+
+
+    // API URL with correct date format
+    $base_url = "https://api.polygon.io/v2/aggs/ticker/$ticker/range/1/minute/$start_date/$end_date?sort=asc&limit=50000&";
+    $headers = [
+        "Authorization: Bearer $api_key"
+    ];
+
+    $all_data = [];
+    $params = [
+        "apiKey" => $api_key
+    ];
+
+    while (true) {
+        $url = $base_url . http_build_query($params);
+        
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $response = curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        // Handle HTTP errors
+        if ($http_code != 200) {
+            echo "Error fetching data: HTTP $http_code - Response: $response\n";
+            return buildResponse("FETCH_SPECIFIC_STOCK_DATA_RESPONSE", "FAILED", ["message" => "Failed to fetch stock data"]);
+        }
+
+        $data = json_decode($response, true);
+
+        if (isset($data['results']) && is_array($data['results'])) {
+            foreach ($data['results'] as $record) {
+                if (isset($record['t'], $record['o'], $record['h'], $record['l'], $record['c'], $record['v'])) {
+                    $adjusted_timestamp = intval($record['t'] / 1000) - (5 * 3600); // Convert ms to sec & subtract 5 hours
+
+                    $all_data[] = [
+                        "ticker" => $ticker,
+                        "timestamp" => $adjusted_timestamp, // Epoch format with -5h adjustment
+                        "open" => floatval($record['o']),
+                        "high" => floatval($record['h']),
+                        "low" => floatval($record['l']),
+                        "close" => floatval($record['c']),
+                        "volume" => intval($record['v'])
+                    ];
+                }
+            }
+
+            // Check for pagination
+            if (isset($data['next'])) {
+                $params["next"] = $data["next"];
+                echo "Fetching next page: " . $data['next'] . "\n";
+                sleep(3);
+            } else {
+                break;
+            }
+        } else {
+            echo "No more data available.\n";
+            break;
+        }
+    }
+    // print_r($all_data);
+    if (!empty($all_data)) {
+        return buildResponse("FETCH_SPECIFIC_STOCK_DATA_RESPONSE", "SUCCESS", ["data" => $all_data, "message" => "Stock data found"]);
+        
+    } else {
+        echo "No data retrieved.\n";
+        return buildResponse("FETCH_SPECIFIC_STOCK_DATA_RESPONSE", "FAILED", ["message" => "No stock data found"]);
+    }
+
+}
+
+function delayed_latest_price($ticker) {
+    global $api_key;
+
+    $url = "https://api.polygon.io/v2/aggs/ticker/$ticker/prev?apiKey=$api_key";
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $response = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+  
+    if ($http_code != 200) {
+        echo "Error fetching latest price: HTTP $http_code - Response: $response\n";
+        return ["returnCode" => '1', "message" => "Failed to fetch latest price"];
+    }
+
+    $data = json_decode($response, true);
+
+    if (isset($data['results']) && is_array($data['results']) && count($data['results']) > 0) {
+        $latest = $data['results'][0];
+        print_r($latest);
+        return [
+            "returnCode" => '0',
+            "message" => "Latest price retrieved",
+            "ticker" => $ticker,
+            "timestamp" => intval($latest['t'] / 1000),
+            "open" => floatval($latest['o']),
+            "high" => floatval($latest['h']),
+            "low" => floatval($latest['l']),
+            "close" => floatval($latest['c']),
+            "volume" => intval($latest['v'])
+        ];
+    } else {
+        return ["returnCode" => '2', "message" => "No price data found for $ticker"];
+    }
+}
+
+$count = 1;
+function getStocksBasedOnRisk($risk, $riskFactor) {
+    global $count;
+    $count++;
+    return ["returnCode" => '0', "message" => "Stocks based on risk " . $risk . " " . $riskFactor , "count" => $count];
+}
+
+
+// fetch_all_stock_data("TSLA", 1738969811, 1741654317)
+// Example Call (for testing)
+// $data = fetch_specific_stock_chart_data('VOO', strtotime('2025-02-01'), strtotime('2025-02-14'));
+// dump into a file json
+// file_put_contents('stock_data.json', json_encode($data, JSON_PRETTY_PRINT));
+?>

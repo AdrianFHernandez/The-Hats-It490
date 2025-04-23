@@ -1,0 +1,3 @@
+0 0 * * 0 /usr/bin/php /home/tds22-it490/The-Hats-It490/Database/databaseAllStocksPopulator >> /home/tds22-it490/The-Hats-It490/Database/cronfile2.log 2>&1
+
+

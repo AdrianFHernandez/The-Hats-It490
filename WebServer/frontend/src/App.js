@@ -3,13 +3,17 @@ import './App.css';
 import RegisterPage from './Pages/RegisterPage';
 import LoginPage from './Pages/LoginPage';
 import HomePage from './Pages/HomePage';
+import SearchAllStocks from './Pages/SearchAllStocks';
 import axios from 'axios';
 import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom"; 
+import getBackendURL from "./Utils/backendURL";
+import ChartPage from "./Components/ChartPage";
+import { useParams } from 'react-router-dom';
 
 function App() {
   const [registering, setRegistering] = useState(false);
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loggedIn, setLoggedIn] = useState(false); 
+  const [loading, setLoading] = useState(true);  
   const [userInfo, setUserInfo] = useState(null);
 
   useEffect(() => {
@@ -18,14 +22,15 @@ function App() {
     const validateSession = async () => {
       try {
         const response = await axios.post(
-          "http://www.sample.com/backend/webserver_backend.php",
-          { type: "validateSession" },
+          getBackendURL(),
+          { type: "VALIDATE_SESSION" },
           { withCredentials: true }
         );
   
         
           console.log("Session Validation Response:", response.data);
-          if (response.data.valid) {
+          if (response.status === 200 && response.data && response.data.valid) {
+            console.log("User is logged in!");
             setLoggedIn(true);
             setUserInfo(response.data.user);
           } else {
@@ -39,7 +44,8 @@ function App() {
       }
     };
   
-    validateSession();
+  
+    validateSession(); 
     
     
   }, []);
@@ -48,8 +54,8 @@ function App() {
   const handleLogout = async () => {
     try {
       await axios.post(
-        "http://www.sample.com/backend/webserver_backend.php",
-        { type: "logout" },
+        getBackendURL(),
+        { type: "LOGOUT" },
         { withCredentials: true }
       );
 
@@ -93,6 +99,19 @@ function App() {
                 <Navigate to="/" replace />
               )
             } />
+              <Route path="/searchallstocks" element={
+                loggedIn ? <SearchAllStocks user={userInfo} handleLogout={handleLogout} /> : <Navigate to="/"  /> 
+              } />
+
+
+
+              <Route path="/chartpage/:Ticker" element={loggedIn ? <ChartPage></ChartPage> : <Navigate to= "/"></Navigate>} />
+
+
+           
+            <Route path="*" element={<Navigate to="/"  />} />
+    
+
           </Routes>
         )}
       </div>

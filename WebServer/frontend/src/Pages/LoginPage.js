@@ -1,18 +1,23 @@
 import React, { useState } from "react";
 import axios from "axios";
+import getBackendURL from "../Utils/backendURL";
 
 function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
+ 
+
+
+
   const handleSubmission = async (event) => {
     event.preventDefault();
 
     try {
       const response = await axios.post(
-        "http://www.sample.com/backend/webserver_backend.php",
-        { type: "login", username, password },
+        getBackendURL(),
+        { type: "LOGIN", username, password },
         { withCredentials: true } // Send cookies
       );
 
@@ -59,6 +64,7 @@ function LoginPage() {
           />
         </div>
         <button type="submit">Login</button>
+    
       </form>
     </div>
   );
