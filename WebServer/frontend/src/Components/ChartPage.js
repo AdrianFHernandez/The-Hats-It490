@@ -7,7 +7,7 @@ import Transaction from "./Transaction";
 import Navbar from "../Components/Navbar";
 import { Container, Row, Col, Form } from "react-bootstrap";
 
-function ChartPage() {
+function ChartPage({ handleLogout }) {
   const { Ticker } = useParams();
   const containerRef = useRef(null);
   const chartRef = useRef(null);
@@ -186,7 +186,7 @@ function ChartPage() {
 
   return (
     <>
-      <Navbar handleLogout={() => (window.location.href = "/")} />
+      <Navbar handleLogout={handleLogout} />
       <Container fluid className="mt-4 bg-transparent px-3">
         <Row>
           <Col xs={12} lg={8}>

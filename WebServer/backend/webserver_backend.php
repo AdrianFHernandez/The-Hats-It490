@@ -2,7 +2,7 @@
 // CORS Headers
 $allowed_origins = [
     'https://localhost:3000',
-    "https://100.70.255.118"
+    "https://www.investzero.com"
 ];
 
 if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
@@ -161,7 +161,7 @@ function handleVerifyOTP($data) {
         setcookie("PHPSESSID", $session_id, [
             "expires" => $session_expires,
             "path" => "/",
-            "domain" => "100.70.255.118",
+            "domain" => "www.investzero.com",
             "secure" => true, // change to false for http testing
             "httponly" => false,
             "samesite" => "None" // lax
@@ -206,7 +206,7 @@ function handleValidateSession() {
         setcookie("PHPSESSID", "", [
             "expires" => -1,
             "path" => "/",
-            "domain" => "100.70.255.118",
+            "domain" => "www.investzero.com",
             "secure" => true,
             "httponly" => false,
             "samesite" => "None"
@@ -238,7 +238,7 @@ function handleLogout() {
         setcookie("PHPSESSID", "", [
             "expires" => -1,
             "path" => "/",
-            "domain" => "100.70.255.118",
+            "domain" => "www.investzero.com",
             "secure" => true,
             "httponly" => false,
             "samesite" => "None"
