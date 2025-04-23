@@ -22,7 +22,7 @@ require_once("rabbitMQLoggingLib.inc");
 
     return buildResponse($request['type'], "UNKNOWN", ["message" => "Unhandled type"]);
 }*/
-
+global $logFile, $logError;
 
     $logDir = "/var/log/LogResponse";
     $logFile = $logDir . "proddistributed_web_login.log";
@@ -31,10 +31,14 @@ require_once("rabbitMQLoggingLib.inc");
 function requestProcessor($request) {
     // Base log file paths
     
-    global $logFile, $logError;
+    $logDir = "/var/log/LogResponse";
+    $logFile = $logDir . "proddistributed_web_login.log";
+    $errorLogFile = $logDir . "errordevdistributed_db_login.err";
+
     $timestamp = date("D M d H:i:s Y");
-    $logEntry = "[$timestamp] " . "--" .
-$request["message"] . "\n";
+    $message = isset($request['message']) ? $request['message'] : 'NO_MESSAGE';
+    $logEntry = "[$timestamp] -- $message\n";
+
 
     // Determine where to log
     if (isset($request['type']) && $request['type'] === "Error") {
