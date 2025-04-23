@@ -23,12 +23,15 @@ require_once("rabbitMQLoggingLib.inc");
     return buildResponse($request['type'], "UNKNOWN", ["message" => "Unhandled type"]);
 }*/
 
+
+    $logDir = "/var/log/LogResponse";
+    $logFile = $logDir . "proddistributed_web_login.log";
+    $errorLogFile = $logDir . "errordevdistributed_db_login.err";
+
 function requestProcessor($request) {
     // Base log file paths
-    $logDir = "/home/Deployment/DistributedLogin/";
-    $logFile = $logDir . "devdistributed_db_login.log";
-    $errorLogFile = $logDir . "errordevdistributed_db_login.log";
-
+    
+    global $logFile, $logError;
     $timestamp = date("D M d H:i:s Y");
     $logEntry = "[$timestamp] " . json_encode($request) . "\n";
 
