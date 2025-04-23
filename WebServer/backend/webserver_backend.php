@@ -72,6 +72,7 @@ function handleRegister($data) {
     $username = $data['username'] ?? '';
     $email = $data['email'] ?? '';
     $password = $data['password'] ?? '';
+    $phone = $data['phone'] ?? '';
 
     if (!$name || !$username || !$email || !$password) {
         echo json_encode(["error" => "All fields are required"]);
@@ -85,7 +86,8 @@ function handleRegister($data) {
         'name' => $name,
         'username' => $username,
         'email' => $email,
-        'password' => $password
+        'password' => $password,
+        'phone' => $phone
     ]);
 
 
@@ -118,6 +120,43 @@ function handleLogin($data) {
     $response = $client->send_request($request);
 
     if ($response && $response['status'] === "SUCCESS" && $response['type'] === 'LOGIN_RESPONSE') {
+        // $session_id = $response["payload"]['session']['sessionId'];
+        // $session_expires = $response["payload"]['session']['expiresAt'];
+        // set session_id in browser cookie with same site attribute as None
+        
+        // setcookie("PHPSESSID", $session_id, [
+        //     "expires" => $session_expires,
+        //     "path" => "/",
+        //     "domain" => "www.sample.com",
+        //     "secure" => false, // change to false for http testing
+        //     "httponly" => true,
+        //     "samesite" => "lax" // lax
+        // ]);
+
+        echo json_encode([
+            "success" => true,
+            //  "sessionId" => $session_id,
+            //  "user" => $response["payload"]['user'],
+             "message" => $response["payload"]['message']
+        ]);
+    } else {
+        echo json_encode(["error" => $response['payload']['error'] ?? "Login failed"]);
+    }
+}
+
+function handleVerifyOTP($data) {
+    $OTP_code = $data['OTP_code'] ?? '';
+    if (!$OTP_code) {
+        echo json_encode(["error" => "OTP code is required"]);
+        exit();
+    }
+    // Send OTP verification request to RabbitMQ
+    $client = get_client();
+    $request = buildRequest('VERIFY_OTP', [
+        'OTP_code' => $OTP_code
+    ]);
+    $response = $client->send_request($request);
+    if ($response && $response['status'] === "SUCCESS" && $response['type'] === 'VERIFY_OTP_RESPONSE') {
         $session_id = $response["payload"]['session']['sessionId'];
         $session_expires = $response["payload"]['session']['expiresAt'];
         // set session_id in browser cookie with same site attribute as None
@@ -138,8 +177,10 @@ function handleLogin($data) {
              "message" => $response["payload"]['message']
         ]);
     } else {
-        echo json_encode(["error" => "Invalid username or password"]);
+        echo json_encode(["error" => "Invalid OTP Code"]);
     }
+
+
 }
 
 // Function to validate session
@@ -438,6 +479,10 @@ switch ($data['type']) {
         break;
     case 'PERFORM_TRANSACTION':
         handlePerformTransaction($data);
+        break;
+    case "VERIFY_OTP":
+        // Handle OTP verification
+        handleVerifyOTP($data);
         break;
 
     default:
