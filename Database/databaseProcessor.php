@@ -6,7 +6,23 @@ require_once('rabbitMQLib.inc');
 require_once('databaseModule.php');
 
 
+function buildLogPayload($type, $message){
+    return [
+        "type" => $type,
+        "message" => $message
+    ];
+}
 
+$LOGclient = null;
+
+function getClientForLOG()
+{
+    global $LOGclient;
+    if ($LOGclient === null){
+        $LOGclient = new rabbitMQClient("DEVDistributedLogginRabbitMQ.ini", "DEVDistributedLogginServer");
+    }
+    return $LOGclient;
+}
 function requestProcessor($request)
 {
     echo "received request".PHP_EOL;
