@@ -246,6 +246,7 @@ function validateSession($sessionId)
 
         return buildResponse("VALIDATE_SESSION_RESPONSE", "SUCCESS", [
             "valid" => true,
+            "message" => "Validation of user -$username- is sucess",
             "user" => [
                 "id" => $userId,
                 "username" => $username,
@@ -372,6 +373,7 @@ function doGetAccountInfo($sessionId)
 
     // Step 5: Return response
     return buildResponse("GET_ACCOUNT_INFO_RESPONSE", "SUCCESS", [
+        "message" => "Account Info Retrieval Success",
         "data" => [
             "user" => [
                 "userStocks" => $userStocks,
@@ -453,7 +455,7 @@ function doGetStockInfo($sessionId, $payload)
     $conn->close();
 
 
-    return buildResponse("GET_STOCK_INFO_RESPONSE", "SUCCESS", ["data" => $stocks]);
+    return buildResponse("GET_STOCK_INFO_RESPONSE", "SUCCESS", ["data" => $stocks, "message"=>"Stock Info retreival success."]);
 }
 
 
@@ -463,7 +465,7 @@ function GetStocksBasedOnRisk($sessionId)
         return buildResponse("GET_STOCKS_BASED_ON_RISK_RESPONSE", "FAILED", ["error" => "Invalid session"]);
     }
 
-    return buildResponse("GET_STOCKS_BASED_ON_RISK_RESPONSE", "SUCCESS", ["stocks" => ["AAPL", "GOOGL", "AMZN", "TSLA", "MSFT"]]);
+    return buildResponse("GET_STOCKS_BASED_ON_RISK_RESPONSE", "SUCCESS", ["stocks" => ["AAPL", "GOOGL", "AMZN", "TSLA", "MSFT"], "message"=>"Stock Risk data retreival success."]);
 }
 
 
