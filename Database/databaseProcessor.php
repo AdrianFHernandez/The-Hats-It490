@@ -27,56 +27,64 @@ function getLogClient()
 
 function requestProcessor($request)
 {
-    echo "received request".PHP_EOL;
+    echo "received request" . PHP_EOL;
     var_dump($request);
 
-    
+    $client = getLogClient(); // Initialize logging client early
+
     if (!isset($request['type'])) {
-        $client = getLogClient();
-        $logPayload = buildLogPayload("ERROR", "Invalid request type");
+        $logPayload = buildLogPayload("ERROR", "Missing request type");
         $client->publish($logPayload);
-        return buildResponse("ERROR", "FAILED", ["message" => "Invalid request type"]);
+        return buildResponse("ERROR", "FAILED", ["message" => "Missing request type"]);
     }
+
+    $response = null;
 
     switch ($request['type']) {
         case "REGISTER":
-            return doRegister($request['payload']['name'], $request['payload']['username'], $request['payload']['email'], $request['payload']['password'], $request["payload"]["phone"]);
+            $response = doRegister(
+                $request['payload']['name'],
+                $request['payload']['username'],
+                $request['payload']['email'],
+                $request['payload']['password'],
+                $request['payload']['phone']
+            );
+            break;
         case "LOGIN":
-            $response = doLogin($request['payload']['username'],$request['payload']['password']);
-            // if ($response["status"] === "SUCCESS") {
-            //     $sessionData = createSession($response["payload"]["user"]["id"]);
-            //     $response["payload"]["session"] = $sessionData;
-            //     clearExpiredSessions();
-            // }
- 
-            if ($response["status"] === "SUCCESS") {
-                $client = getLogClient();
-                $logPayload = buildLogPayload("INFO", "User logged in: " . $request['payload']['username']);
-                $client->publish($logPayload);
-   
-            }
-            else{
-              
-                $client = getLogClient();
-                $logPayload = buildLogPayload("ERROR", "User login failed: " . $request['payload']['username']);
-                $client->publish($logPayload);
-            }
-         
-            return $response;
+            $response = doLogin($request['payload']['username'], $request['payload']['password']);
+            break;
         case "VALIDATE_SESSION":
-            return validateSession($request['payload']['sessionId']);
+            $response = validateSession($request['payload']['sessionId']);
+            break;
         case "LOGOUT":
-            return doLogout($request['payload']['sessionId']);
+            $response = doLogout($request['payload']['sessionId']);
+            break;
         case "GET_ACCOUNT_INFO":
-            return doGetAccountInfo($request["payload"]['sessionId']);
+            $response = doGetAccountInfo($request["payload"]['sessionId']);
+            break;
         case "GET_STOCK_INFO":
-            return doGetStockInfo($request["payload"]['sessionId'], $request["payload"]);
+            $response = doGetStockInfo($request["payload"]['sessionId'], $request["payload"]);
+            break;
         case "GET_STOCKS_BASED_ON_RISK":
-            return GetStocksBasedOnRisk($request["payload"]['sessionId'] );
+            $response = GetStocksBasedOnRisk($request["payload"]['sessionId']);
+            break;
         case "PERFORM_TRANSACTION":
-            return performTransaction($request["payload"]['sessionId'], $request["payload"]['ticker'], $request["payload"]['quantity'], $request["payload"]['price'], $request["payload"]['type']);
+            $response = performTransaction(
+                $request["payload"]['sessionId'],
+                $request["payload"]['ticker'],
+                $request["payload"]['quantity'],
+                $request["payload"]['price'],
+                $request["payload"]['type']
+            );
+            break;
         case "FETCH_SPECIFIC_STOCK_DATA":
-            return fetchSpecificStockData($request["payload"]['sessionId'], $request["payload"]['ticker'], $request["payload"]['start'], $request["payload"]['end']);
+            $response = fetchSpecificStockData(
+                $request["payload"]['sessionId'],
+                $request["payload"]['ticker'],
+                $request["payload"]['start'],
+                $request["payload"]['end']
+            );
+            break;
         case "VERIFY_OTP":
             $response = verifyOTP($request["payload"]['OTP_code']);
             if ($response["status"] === "SUCCESS") {
@@ -84,10 +92,19 @@ function requestProcessor($request)
                 $response["payload"]["session"] = $sessionData;
                 clearExpiredSessions();
             }
-            return $response;    
+            break;
         default:
-            return buildResponse("ERROR", "FAILED", ["message" => "Invalid request type"]);
+            $response = buildResponse("ERROR", "FAILED", ["message" => "Unknown request type: " . $request['type']]);
+            break;
     }
+
+    // Logging every response
+    $logType = ($response['status'] === "SUCCESS") ? "INFO" : "ERROR";
+    $logMessage = $response["payload"]["message"] ?? $response["payload"]["error"] ?? "Error in database processor";
+
+    $client->publish(buildLogPayload($logType, $logMessage));
+
+    return $response;
 }
 
 $server = new rabbitMQServer("HatsRabbitMQ.ini","Server");
