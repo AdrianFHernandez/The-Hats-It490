@@ -5,7 +5,25 @@ require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 require_once('databaseModule.php');
 
+function buildLogPayload($type, $message)
+{
+    return [
+        'type' => $type,
+        'message' => $message
+    ];
+}
 
+
+$LogClient = null;
+
+function getLogClient()
+{
+    global $LogClient;
+    if ($LogClient === null) {
+        $LogClient = new rabbitMQClient("DEVDistributedLogginRabbitMQ.ini", "DEVDistributedLogginServer");
+    }
+    return $LogClient;
+}
 
 function requestProcessor($request)
 {
@@ -14,6 +32,9 @@ function requestProcessor($request)
 
     
     if (!isset($request['type'])) {
+        $client = getLogClient();
+        $logPayload = buildLogPayload("ERROR", "Invalid request type");
+        $client->publish($logPayload);
         return buildResponse("ERROR", "FAILED", ["message" => "Invalid request type"]);
     }
 
@@ -27,6 +48,20 @@ function requestProcessor($request)
             //     $response["payload"]["session"] = $sessionData;
             //     clearExpiredSessions();
             // }
+ 
+            if ($response["status"] === "SUCCESS") {
+                $client = getLogClient();
+                $logPayload = buildLogPayload("INFO", "User logged in: " . $request['payload']['username']);
+                $client->publish($logPayload);
+   
+            }
+            else{
+              
+                $client = getLogClient();
+                $logPayload = buildLogPayload("ERROR", "User login failed: " . $request['payload']['username']);
+                $client->publish($logPayload);
+            }
+         
             return $response;
         case "VALIDATE_SESSION":
             return validateSession($request['payload']['sessionId']);
