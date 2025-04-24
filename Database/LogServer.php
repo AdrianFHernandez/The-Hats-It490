@@ -7,6 +7,7 @@ require_once("rabbitMQLib.inc");
     $logFile = $logDir . "DistributedInvestZero.log";
     $logError = $logDir . "DistributedInvestZero.err";
 
+    
 function requestProcessor($request) {
     // Base log file paths
    print_r($request); 
