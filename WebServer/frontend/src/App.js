@@ -104,7 +104,7 @@ function App() {
             } />
 
             <Route path="/chartpage/:Ticker" element={
-              loggedIn ? <ChartPage /> : <Navigate to="/" />
+              loggedIn ? <ChartPage handleLogout={handleLogout}/> : <Navigate to="/" />
             } />
 
             <Route path="*" element={<Navigate to="/" />} />
