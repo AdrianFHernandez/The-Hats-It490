@@ -52,6 +52,7 @@ function dbConnect()
 function doRegister($name, $username, $email, $password, $phone)
 {
     $conn = dbConnect();
+    
 
     // Check if username or email already exists
     $stmt = $conn->prepare("SELECT userID FROM Users WHERE username = ? OR email = ?");

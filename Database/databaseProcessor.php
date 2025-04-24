@@ -5,24 +5,11 @@ require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 require_once('databaseModule.php');
 
-function buildLogPayload($type, $message)
+function logExternally($type, $text)
 {
-    return [
-        'type' => $type,
-        'message' => $message
-    ];
-}
-
-
-$LogClient = null;
-
-function getLogClient()
-{
-    global $LogClient;
-    if ($LogClient === null) {
-        $LogClient = new rabbitMQClient("DEVDistributedLogginRabbitMQ.ini", "DEVDistributedLogginServer");
-    }
-    return $LogClient;
+    $escapedText = escapeshellarg($text);
+    $type = strtoupper($type);
+    exec("php logEvent.php $type $escapedText > /dev/null 2>&1 &");
 }
 
 function requestProcessor($request)
@@ -30,11 +17,8 @@ function requestProcessor($request)
     echo "received request" . PHP_EOL;
     var_dump($request);
 
-    $client = getLogClient(); // Initialize logging client early
-
     if (!isset($request['type'])) {
-        $logPayload = buildLogPayload("ERROR", "Missing request type");
-        $client->publish($logPayload);
+        logExternally("ERROR", "Missing request type");
         return buildResponse("ERROR", "FAILED", ["message" => "Missing request type"]);
     }
 
@@ -100,18 +84,17 @@ function requestProcessor($request)
 
     // Logging every response
     $logType = ($response['status'] === "SUCCESS") ? "INFO" : "ERROR";
-    $logMessage = $response["payload"]["message"] ?? $response["payload"]["error"] ?? "Error in database processor";
+    $logMessage = $response["payload"]["message"] ?? $response["payload"]["error"] ?? "error in databaseprocessor";
 
-    $client->publish(buildLogPayload($logType, $logMessage));
+    logExternally($logType, $logMessage);
 
     return $response;
 }
 
-$server = new rabbitMQServer("HatsRabbitMQ.ini","Server");
+$server = new rabbitMQServer("HatsRabbitMQ.ini", "Server");
 
-
-echo "testRabbitMQServer BEGIN".PHP_EOL;
+echo "testRabbitMQServer BEGIN" . PHP_EOL;
 $server->process_requests('requestProcessor');
-echo "testRabbitMQServer END".PHP_EOL;
+echo "testRabbitMQServer END" . PHP_EOL;
 exit();
 ?>
