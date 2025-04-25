@@ -12,7 +12,7 @@ function requestProcessor($request) {
    print_r($request["message"]); 
 	global $logFile, $logError;
     $timestamp = date("D M d H:i:s Y");
-    $logEntry = "[$timestamp] " . " -- Web -- " . $request["message"] . "\n";
+    $logEntry = "[$timestamp] " . " -- Web PROD -- " . $request["message"] . "\n";
 
     // Determine where to log
     if (isset($request['type']) && $request['type'] === "Error") {

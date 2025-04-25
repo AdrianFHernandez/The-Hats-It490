@@ -14,7 +14,7 @@ function buildRequest($type, $message) {
 
 $client = new rabbitMQClient("PRODDistributedLogginRabbitMQ.ini", "PRODistributedLogginServer");
 
-$req = buildRequest("Error", "Message sent by Web Client");
+$req = buildRequest("Error", "Message sent by DMZ Client");
 
  print_r($req);
 $response = $client->publish($req);
