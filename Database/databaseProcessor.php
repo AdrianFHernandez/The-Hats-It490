@@ -10,6 +10,7 @@ function logExternally($type, $text)
     $escapedText = escapeshellarg($text);
     $type = strtoupper($type);
     exec("php logEvent.php $type $escapedText > /dev/null 2>&1 &");
+    // file_put_contents("logEvent.log", "Log event executed: $type $escapedText\n", FILE_APPEND);
 }
 
 function requestProcessor($request)
@@ -83,8 +84,9 @@ function requestProcessor($request)
     }
 
     // Logging every response
-    $logType = ($response['status'] === "SUCCESS") ? "INFO" : "ERROR";
+    $logType = ($response['status'] === "SUCCESS") ? "LOG" : "ERROR";
     $logMessage = $response["payload"]["message"] ?? $response["payload"]["error"] ?? "error in databaseprocessor";
+
 
     logExternally($logType, $logMessage);
 
