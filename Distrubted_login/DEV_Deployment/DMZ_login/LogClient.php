@@ -1,7 +1,7 @@
 #!/usr/bin/php
 <?php
 
-require_once("rabbitMQLoggingLib.inc");
+require_once("rabbitMQLib.inc");
 
 function buildRequest($type, $message) {
     return [

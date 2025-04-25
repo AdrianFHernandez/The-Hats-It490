@@ -1,13 +1,12 @@
 #!/usr/bin/php
 <?php
 
-require_once("rabbitMQLoggingLib.inc");
+require_once("rabbitMQLib.inc");
 
-function buildRequest($type, $payload = []) {
+function buildRequest($type, $message) {
     return [
         "type" => $type,
-        "timestamp" => time(),
-        "payload" => $payload
+        "message" => $message
     ];
 }
 
@@ -15,8 +14,9 @@ function buildRequest($type, $payload = []) {
 
 $client = new rabbitMQClient("PRODDistributedLogginRabbitMQ.ini", "PRODistributedLogginServer");
 
-$req = buildRequest("Error", ["message"=>"found DataBase error"]);
-// print_r($req);
+$req = buildRequest("Error", "Message sent by Web Client");
+
+ print_r($req);
 $response = $client->publish($req);
 
 print_r($response);
