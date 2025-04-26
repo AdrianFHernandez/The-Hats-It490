@@ -3,11 +3,10 @@
 
 require_once("rabbitMQLib.inc");
 
-function buildRequest($type, $payload = []) {
+function buildRequest($type, $message) {
     return [
         "type" => $type,
-        "timestamp" => time(),
-        "payload" => $payload
+        "message" => $message
     ];
 }
 
@@ -15,7 +14,7 @@ function buildRequest($type, $payload = []) {
 
 $client = new rabbitMQClient("QADistributedLogginRabbitMQ.ini", "QADistributedLogginServer");
 
-$req = buildRequest("Error", ["message"=>"found web error"]);
+$req = buildRequest("LOG", "Found Web LOG");
 // print_r($req);
 $response = $client->publish($req);
 
