@@ -35,10 +35,10 @@ function requestProcessor($request)
     case "FETCH_ALL_STOCKS":
         return fetchActiveStocks();
     case "SEND_OTP_CODE":
-        return buildResponse("SEND_OTP_CODE_RESPONSE", "SUCCESS", [
-            "message" => "OTP sent successfully" . $request['payload']["otpCode"],
-        ]);
-        // return sendOTP($request['payload']["phoneNumber"], $request['payload']["otpCode"]);
+        // return buildResponse("SEND_OTP_CODE_RESPONSE", "SUCCESS", [
+        //     "message" => "OTP sent successfully" . $request['payload']["otpCode"],
+        // ]);
+        return sendOTP($request['payload']["phoneNumber"], $request['payload']["otpCode"]);
     
   }
 
