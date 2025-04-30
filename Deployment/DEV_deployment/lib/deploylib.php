@@ -170,7 +170,6 @@ function createAndRegisterBundle($bundleName, $hostType, $sourceDir)
         }
     }
 
-
     if (!empty($missingFiles)) {
         return ["error" => "Missing files: " . implode(', ', $missingFiles)];
     }
@@ -218,6 +217,7 @@ function createAndRegisterBundle($bundleName, $hostType, $sourceDir)
     // echo "Bundle created: $zipPath\n";
     return addNewBundle($bundleName, $hostType, $zipPath, $version);
 }
+
 
 function createAndRegisterBundleFromIni($sourceDir)
 {

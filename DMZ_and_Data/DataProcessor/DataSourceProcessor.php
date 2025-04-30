@@ -10,7 +10,7 @@ require_once('otp_utils.php');
 $i = 0;
 function requestProcessor($request)
 {
-  echo "received request".PHP_EOL;
+  echo "received request -deploy test".PHP_EOL;
   var_dump($request);
   if(!isset($request['type']))
   {
