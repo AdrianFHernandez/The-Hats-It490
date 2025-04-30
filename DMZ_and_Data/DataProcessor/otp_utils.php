@@ -15,7 +15,11 @@ function sendOTP($phoneNumber, $otpCode) {
     $verifyServiceSid = $_ENV['TWILIO_VERIFY_SERVICE_SID'];
 
     $channel = 'sms'; 
-
+	// Remove the return statement for prod, rn its to not burn through the credits
+    return buildResponse("SEND_OTP_CODE_RESPONSE", "SUCCESS", [
+            "message" => "OTP sent successfully- $otpCode",
+            "status" => true,
+        ]);
     
     $twilio = new Client($accountSid, $authToken);
 
