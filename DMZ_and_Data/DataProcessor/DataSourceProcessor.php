@@ -7,43 +7,72 @@ require_once('data.php');
 require_once('CollectAllStocks.php');
 require_once('otp_utils.php');
 
-$i = 0;
-function requestProcessor($request)
+function logExternally($type, $text)
 {
-  echo "received request".PHP_EOL;
+    $escapedText = escapeshellarg($text);
+    $type = strtoupper($type);
+    exec("php logEvent.php $type $escapedText > /dev/null 2>&1 &");
+    // file_put_contents("logEvent.log", "Log event executed: $type $escapedText\n", FILE_APPEND);
+}
+
+$i = 0;
+function requestProcessor($request) {
+  echo "received request - deploy test" . PHP_EOL;
   var_dump($request);
-  if(!isset($request['type']))
-  {
-    return "ERROR: unsupported message type";
-  }
-  switch ($request['type'])
-  {
-    case "FETCH_SPECIFIC_STOCK_DATA":
-      global $i;
-      if ($i < -1){
-        return buildResponse("ERROR", "FAILED", ["message" => "Request limit reached"]);
-        
+
+  if (!isset($request['type'])) {
+      $response = buildResponse("ERROR", "FAILED", ["message" => "Missing request type"]);
+  } else {
+      switch ($request['type']) {
+          case "FETCH_SPECIFIC_STOCK_DATA":
+              global $i;
+              if ($i < -1){
+                  $response = buildResponse("ERROR", "FAILED", ["message" => "Request limit reached"]);
+              } else {
+                  $i += 1;
+                  $response = fetch_specific_stock_chart_data(
+                      $request['payload']["ticker"],
+                      $request["payload"]["startTime"],
+                      $request["payload"]["endTime"]
+                  );
+              }
+              break;
+
+          case "get_latest_price":
+              $response = delayed_latest_price($request["ticker"]);
+              break;
+
+          case "FETCH_ALL_TICKERS":
+              $response = fetchAllTickers();
+              break;
+
+          case "getStocksBasedOnRisk":
+              $response = getStocksBasedOnRisk($request['risk'], $request['riskFactor']);
+              break;
+
+          case "FETCH_ALL_STOCKS":
+              $response = fetchActiveStocks();
+              break;
+
+          case "SEND_OTP_CODE":
+              $response = sendOTP($request['payload']["phoneNumber"], $request['payload']["otpCode"]);
+              break;
+
+          default:
+              $response = buildResponse("ERROR", "FAILED", ["message" => "Unknown request type: " . $request['type']]);
+              break;
       }
-      $i += 1;
-      return fetch_specific_stock_chart_data($request['payload']["ticker"],$request["payload"]["startTime"], $request["payload"]["endTime"]);
-    case "get_latest_price":
-      return delayed_latest_price($request["ticker"]);
-    case "FETCH_ALL_TICKERS":
-      return fetchAllTickers();
-    case "getStocksBasedOnRisk":
-      return getStocksBasedOnRisk($request['risk'], $request['riskFactor']);
-    case "FETCH_ALL_STOCKS":
-        return fetchActiveStocks();
-    case "SEND_OTP_CODE":
-        // return buildResponse("SEND_OTP_CODE_RESPONSE", "SUCCESS", [
-        //     "message" => "OTP sent successfully" . $request['payload']["otpCode"],
-        // ]);
-        return sendOTP($request['payload']["phoneNumber"], $request['payload']["otpCode"]);
-    
   }
 
-  return buildResponse("ERROR", "FAILED", ["message" => "Request type not supported"]);
+  $logType = ($response['status'] === "SUCCESS") ? "LOG" : "ERROR";
+  $logMessage = $response["payload"]["message"] ?? $response["payload"]["error"] ?? $response["message"] ?? "Unknown response error";
+
+  logExternally($logType, "DMZ: " . $logMessage);
+
+  return $response;
 }
+
+
 
 $server = new rabbitMQServer("HatsDMZRabbitMQ.ini","Server");
 
@@ -52,4 +81,5 @@ $server->process_requests('requestProcessor');
 echo "DataSource Processor END".PHP_EOL;
 exit();
 ?>
+
 

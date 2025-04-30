@@ -11,6 +11,7 @@ sudo a2ensite default-ssl.conf
 
 
 
+
 # Building frontend
 cd WebServer/frontend && npm run build
 cd ../
