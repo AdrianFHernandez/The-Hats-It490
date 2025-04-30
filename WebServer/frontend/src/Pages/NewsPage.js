@@ -17,10 +17,15 @@ function NewsPage({ handleLogout }) {
                     type: "GET_NEWS"
                 }, { withCredentials: true });
 
-                if (response.status === 200 && response.data.articles) {
-                    setNewsData(response.data.articles);
+                if (
+                    response.status === 200 &&
+                    response.data.status === "SUCCESS" &&
+                    response.data.data &&
+                    response.data.data.articles
+                ) {
+                    setNewsData(response.data.data.articles);
                 } else {
-                    setError("No news articles found.");
+                    setError(response.data.data?.message || "No news articles found.");
                 }
             } catch (err) {
                 console.error("Error fetching news:", err);
@@ -47,7 +52,7 @@ function NewsPage({ handleLogout }) {
                         <div key={index} style={{ border: "1px solid #ddd", padding: "12px", marginBottom: "10px" }}>
                             <h3>{article.title}</h3>
                             {article.description && <p>{article.description}</p>}
-                            <p><strong>Source:</strong> {article.source?.name || "Unknown"}</p>
+                            <p><strong>Source:</strong> {article.source || "Unknown"}</p>
                             <a href={article.url} target="_blank" rel="noopener noreferrer">Read more</a>
                         </div>
                     ))}

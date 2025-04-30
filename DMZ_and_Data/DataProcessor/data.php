@@ -310,10 +310,55 @@ function getChatbotAnswer($question) {
         return buildResponse("GET_CHATBOT_ANSWER_RESPONSE", "FAILED", ["message" => "No answer found in the response"]);
     }
 }
+function getNews($query = 'stock market') {
+    $apiKey = '8d5a9d21ff124dcf966dc98bb60ec48e'; 
+    $url = 'https://newsapi.org/v2/everything?q=' . urlencode($query) . '&sortBy=publishedAt&language=en&apiKey=' . $apiKey;
 
-function getNews(){
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Accept: application/json',
+        'User-Agent: InvestZero-NewsBot/1.0'
+    ]);
+
+    $response = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($http_code != 200) {
+        return buildResponse("GET_NEWS_RESPONSE", "FAILED", [
+            "message" => "Error fetching news: HTTP $http_code"
+        ]);
+    }
+
+    $responseData = json_decode($response, true);
+
+    if (!$responseData || !isset($responseData['articles'])) {
+        return buildResponse("GET_NEWS_RESPONSE", "FAILED", [
+            "message" => "Failed to decode or parse news data"
+        ]);
+    }
+
+    $articles = [];
+    foreach ($responseData['articles'] as $index => $article) {
+        if ($index >= 5) break; // Limit to 5 articles
+        $articles[] = [
+            "title" => $article['title'] ?? '',
+            "description" => $article['description'] ?? '',
+            "url" => $article['url'] ?? '',
+            "source" => $article['source']['name'] ?? '',
+            "publishedAt" => $article['publishedAt'] ?? ''
+        ];
+    }
+
+    return buildResponse("GET_NEWS_RESPONSE", "SUCCESS", [
+        "articles" => $articles,
+        "message" => "News retrieved successfully"
+    ]);
 }
+
+
 
 // fetch_all_stock_data("TSLA", 1738969811, 1741654317)
 // Example Call (for testing)
