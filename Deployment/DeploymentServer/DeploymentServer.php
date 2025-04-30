@@ -6,7 +6,7 @@ require_once(__DIR__ . "/lib/modules.php");
 require_once(__DIR__ . "/lib/DeploymentLib.php");
 
 $mysqli = new mysqli('localhost', 'testUser', '12345', 'deployment');
-$deployServerArchiveLocation = "/home/QA-DB/deploy_archive/";
+$deployServerArchiveLocation = "/home/Deployment/deploy_archive/";
 function buildRequest($type, $payload = []) {
     return [
         "type" => $type,
