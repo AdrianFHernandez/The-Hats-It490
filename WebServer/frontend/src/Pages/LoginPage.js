@@ -22,10 +22,11 @@ function LoginPage() {
         { type: "VERIFY_OTP", OTP_code: otp },
         { withCredentials: true }
       );
-
+     
       console.log("OTP VERIFIED:", response.data);
 
       if (response.data.success) {
+        window.alert("Youa re good");
         window.location.href = "/home";
       } else {
         setError("Invalid OTP. Please try again.");

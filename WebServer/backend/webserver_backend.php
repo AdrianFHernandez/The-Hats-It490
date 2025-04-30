@@ -83,7 +83,15 @@ function handleLogin($data) {
         'password' => $data['password'] ?? ''
     ]);
     $response = get_client()->send_request($request);
-    echo json_encode($response);
+    if ($response && $response['status'] === "SUCCESS" && $response['type'] === 'LOGIN_RESPONSE') {
+        echo json_encode([
+            "success" => true,
+             "message" => $response["payload"]['message']
+        ]);
+    } else {
+        echo json_encode(["error" => $response['payload']['error'] ?? "Login failed"]);
+    }
+    
 }
 
 function handleValidateSession() {
@@ -149,18 +157,30 @@ function handleVerifyOTP($data) {
         'OTP_code' => $data['OTP_code'] ?? ''
     ]);
     $response = get_client()->send_request($request);
-    if ($response["status"] === "SUCCESS") {
-        $session = $response["payload"]["session"];
-        setcookie("PHPSESSID", $session['sessionId'], [
-            "expires" => $session['expiresAt'],
+    if ($response && $response['status'] === "SUCCESS" && $response['type'] === 'VERIFY_OTP_RESPONSE') {
+        $session_id = $response["payload"]['session']['sessionId'];
+        $session_expires = $response["payload"]['session']['expiresAt'];
+        // set session_id in browser cookie with same site attribute as None
+        
+        setcookie("PHPSESSID", $session_id, [
+            "expires" => $session_expires,
             "path" => "/",
             "domain" => "www.investzero.com",
-            "secure" => true,
+            "secure" => true, // change to false for http testing
             "httponly" => false,
-            "samesite" => "None"
+            "samesite" => "None" // lax
         ]);
+
+        echo json_encode([
+            "success" => true,
+             "sessionId" => $session_id,
+             "user" => $response["payload"]['user'],
+             "message" => $response["payload"]['message']
+        ]);
+    } else {
+        echo json_encode(["error" => "Invalid OTP Code"]);
     }
-    echo json_encode($response);
+   
 }
 
 function handlePerformTransaction($data) {
