@@ -438,6 +438,25 @@ function handleGetChatbotAnswer($data){
     }
 }
 
+function handleGetNews(){
+
+    $client = get_client();
+    $request = buildRequest('GET_NEWS', [
+        'sessionId' => $_COOKIE['PHPSESSID'],
+    ]);
+    //
+    $response = $client->send_request($request);
+    
+    if ($response && $response["status"] === "SUCCESS" && $response["type"] === "GET_NEWS_RESPONSE") {
+        echo json_encode([
+            "message" => $response["payload"]["message"],
+            "news" => $response["payload"]["data"]
+        ]);
+    } else {
+        echo json_encode(["error" => "Failed to fetch news"]);
+    }
+}
+
 // Process API requests
 switch ($data['type']) {
     case 'REGISTER':
@@ -472,6 +491,9 @@ switch ($data['type']) {
         break;
     case "GET_CHATBOT_ANSWER":
         handleGetChatbotAnswer($data);
+        break;
+    case "GET_NEWS":
+        handleGetNews();
         break;
     default:
         echo json_encode(["error" => "Unknown request type --"]);

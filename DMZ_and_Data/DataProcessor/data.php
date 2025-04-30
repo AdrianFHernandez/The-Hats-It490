@@ -311,6 +311,9 @@ function getChatbotAnswer($question) {
     }
 }
 
+function getNews(){
+    
+}
 
 // fetch_all_stock_data("TSLA", 1738969811, 1741654317)
 // Example Call (for testing)

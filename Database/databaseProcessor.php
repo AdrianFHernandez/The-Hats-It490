@@ -46,6 +46,8 @@ function requestProcessor($request)
             return getRecommendedStocks($request["payload"]['sessionId'], $request["payload"]['riskLevel']);
         case "GET_CHATBOT_ANSWER":
             return getChatbotAnswer($request["payload"]['sessionId'], $request["payload"]['question']);
+        case "GET_NEWS":
+            return getNews($request["payload"]['sessionId']);
         default:
             return buildResponse("ERROR", "FAILED", ["message" => "Invalid request type"]);
     }
