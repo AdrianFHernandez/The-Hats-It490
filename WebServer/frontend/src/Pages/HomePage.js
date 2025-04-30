@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Link } from "react-router-dom";
-import Navbar from "../Components/Navbar";  // Import Navbar
+import Navbar from "../Components/Navbar";
 import getBackendURL from "../Utils/backendURL";
 import Portfolio from "../Components/Portfolio";
 
@@ -23,12 +22,11 @@ function HomePage({ user, handleLogout }) {
         if (response.status === 200 && response.data) {
           setHaveUserBalance(true);
           setAccount(response.data);
-          
-          // Ensure user balance is updated
+
           if (response.data.user && response.data.user.balance !== undefined) {
             setUserBalance(response.data.user.balance);
           } else {
-            setUserBalance(0); // Default to zero if not found
+            setUserBalance(0);
           }
         } else {
           setError("Unable to retrieve user balance.");
@@ -43,29 +41,47 @@ function HomePage({ user, handleLogout }) {
   }, []);
 
   return (
-    <div className="homepage container">
-      <Navbar handleLogout={handleLogout} /> {/* Use Navbar here */}
+    <div className="homepage" >
+      <Navbar handleLogout={handleLogout}/>
 
-      <h1>Welcome to your Home Page</h1>
-
-      {/* <Link to="/searchallstocks">
-        <button>Search for Stocks</button>
-      </Link> */}
-
-      {user ? (
-        <div>
-          <h3>Logged in as: {user.username}</h3>
-
-          {account ? <Portfolio userAccount={account.user} /> : <p>Loading portfolio...</p>}
-
-         
+      <div className="row justify-content-center mb-4">
+        <div className="col-12 col-md-10 text-center">
+          <h1 className="mb-3">Welcome to your Portfolio</h1>
+          {user && (
+            <h5 className="text-light mb-3">
+            Logged in as: <span className="font-weight-bold" style={{color:"lightblue"}}>{user.username}</span>
+        
+          </h5>
+          
+          )}
         </div>
-      ) : (
-        <h3>No user data available...</h3>
-      )}
+      </div>
 
-      {/* Show error messages if any */}
-      {error && <p style={{ color: "red" }}>Error: {error}</p>}
+      <div className="row justify-content-center">
+        <div className="col-12 col-md-10">
+          {user ? (
+            account ? (
+              <Portfolio userAccount={account.user} />
+            ) : (
+              <div className="d-flex justify-content-center py-4">
+                <div className="spinner-border text-secondary" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+              </div>
+            )
+          ) : (
+            <div className="text-danger text-center mb-4">
+              <h4>No user data available...</h4>
+            </div>
+          )}
+
+          {error && (
+            <div className="alert alert-danger text-center mt-4" role="alert">
+              Error: {error}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

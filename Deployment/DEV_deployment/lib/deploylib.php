@@ -86,17 +86,50 @@ function markStatus($bundleName, $version, $status)
     ]);
 }
 
+function zip_bundles($inputs, $zipName, $sudoPassword) {
+    $zipPath = $zipName;
+    $cmds = [];
+    $skipped = [];
+
+    foreach ($inputs as $input) {
+        $realPath = realpath($input);
+        if (!$realPath) {
+            $skipped[] = $input;
+            continue;
+        }
+
+        if (is_dir($realPath)) {
+            $parentDir = dirname($realPath);
+            $folderName = basename($realPath);
+            $cmds[] = "echo " . escapeshellarg($sudoPassword) . " | sudo -S bash -c " .
+                      escapeshellarg("(cd " . $parentDir . " && zip -r -q " . $zipPath . " " . $folderName . ")");
+        } elseif (is_file($realPath)) {
+            $parent = dirname($realPath);
+            $basename = basename($realPath);
+            $cmds[] = "echo " . escapeshellarg($sudoPassword) . " | sudo -S bash -c " .
+                      escapeshellarg("(cd " . $parent . " && zip -q " . $zipPath . " " . $basename . ")");
+        }
+    }
+
+    $finalCmd = implode(" && ", $cmds);
+    $output = [];
+    $exitCode = null;
+
+    exec($finalCmd, $output, $exitCode);
+
+    return $exitCode;
+}
+
 
 function createAndRegisterBundle($bundleName, $hostType, $sourceDir)
 {
     $validHostTypes = ['dmz', 'web', 'db'];
-    if (!in_array($hostType, $validHostTypes)) {
+    if (!in_array(strtolower($hostType), $validHostTypes)) {
         return ["error" => "Invalid host type: $hostType"];
     }
 
     $sourceDir = rtrim($sourceDir, '/');
     $bundleIniPath = $sourceDir . "/bundle.ini";
-
     $hostname = gethostname();
     $bundleDir = "/home/$hostname/TempBundles";
 
@@ -108,10 +141,8 @@ function createAndRegisterBundle($bundleName, $hostType, $sourceDir)
         return ["error" => "Missing bundle.ini in source folder"];
     }
 
-    if (!is_dir($bundleDir)) {
-        if (!mkdir($bundleDir, 0777, true)) {
-            return ["error" => "Failed to create bundle directory: $bundleDir"];
-        }
+    if (!is_dir($bundleDir) && !mkdir($bundleDir, 0777, true)) {
+        return ["error" => "Failed to create bundle directory: $bundleDir"];
     }
 
     $config = parse_ini_file($bundleIniPath, true);
@@ -121,21 +152,21 @@ function createAndRegisterBundle($bundleName, $hostType, $sourceDir)
 
     $filesToInclude = $config['files']['include'];
     if (!is_array($filesToInclude)) {
-        $filesToInclude = [$filesToInclude]; // single entry case
+        $filesToInclude = [$filesToInclude];
     }
 
-    // Check all files exist
     $missingFiles = [];
+    $resolvedInputs = [];
 
     foreach ($filesToInclude as $file) {
-        if (strpos($file, '/') === 0 || strpos($file, '~') === 0) {
-            $fullPath = ($file[0] === '~') ? str_replace('~', getenv('HOME'), $file) : $file;
-        } else {
-            $fullPath = $sourceDir . '/' . $file;
-        }
+        $file = rtrim($file, '/');
+        $fullPath = ($file[0] === '~') ? str_replace('~', getenv('HOME'), $file) :
+                    ((strpos($file, '/') === 0) ? $file : $sourceDir . '/' . $file);
 
-        if (!file_exists($fullPath)) {
+        if (!$fullPath || !file_exists($fullPath)) {
             $missingFiles[] = $file;
+        } else {
+            $resolvedInputs[] = $fullPath;
         }
     }
 
@@ -144,13 +175,28 @@ function createAndRegisterBundle($bundleName, $hostType, $sourceDir)
         return ["error" => "Missing files: " . implode(', ', $missingFiles)];
     }
 
-    $filesToInclude = array_map(function ($f) {
-        return rtrim($f, '/');
-    }, $filesToInclude);
+   
+    foreach (['execute', 'sudo'] as $cmdType) {
+        if (isset($config['commands'][$cmdType])) {
+            $cmds = $config['commands'][$cmdType];
+            $cmds = is_array($cmds) ? $cmds : [$cmds];
+            $cleaned = [];
 
-    if (in_array('./', $filesToInclude)) {
-        $filesToInclude = ['./'];
+            foreach ($cmds as $cmd) {
+                $result = validateAndSanitizeCommand($cmd, $cmdType);
+                if (!$result['valid']) {
+                    return ["error" => "Invalid {$cmdType} command: {$result['error']}"];
+                }
+                $cleaned[] = $result['command'];
+            }
+
+          
+            $config['commands'][$cmdType] = $cleaned;
+        }
     }
+
+    
+    $resolvedInputs[] = $bundleIniPath;
 
     $versionResponse = getNextVersion($bundleName);
     if ($versionResponse['status'] !== "SUCCESS") {
@@ -161,21 +207,16 @@ function createAndRegisterBundle($bundleName, $hostType, $sourceDir)
     $zipName = "{$bundleName}_v{$version}.zip";
     $zipPath = $bundleDir . "/" . $zipName;
 
-    // Save the version in the bundle.ini
+    
     $config['bundle']['version'] = $version;
-
-    // Save the updated INI file
     file_put_contents($bundleIniPath, build_ini_string($config));
 
-    // Create the zip
-    $tmpZipCmd = "cd $sourceDir && zip -r $zipPath " . " bundle.ini " . implode(" ", array_map('escapeshellarg', $filesToInclude));
-    exec($tmpZipCmd, $output, $code);
-    if ($code !== 0) {
-        return ["error" => "Failed to create zip: " . implode("\n", $output)];
+    $exitCode = zip_bundles($resolvedInputs, $zipPath, "ubuntu");
+    if ($exitCode !== 0) {
+        return ["error" => "Failed to create zip bundle"];
     }
-
-    $registerResponse = addNewBundle($bundleName, $hostType, $zipPath, $version);
-    return $registerResponse;
+    // echo "Bundle created: $zipPath\n";
+    return addNewBundle($bundleName, $hostType, $zipPath, $version);
 }
 
 function createAndRegisterBundleFromIni($sourceDir)
@@ -198,3 +239,58 @@ function createAndRegisterBundleFromIni($sourceDir)
     $hostType = strtolower($config['bundle']['host_type']);
     return createAndRegisterBundle($bundleName, $hostType, $sourceDir);
 }
+
+
+function validateAndSanitizeCommand(string $command, string $type): array {
+     // Whitelist of allowed commands
+     $allowedStarts = [
+        'cp',
+        'chmod',
+        'mv',
+    ];
+
+    // Block dangerous patterns
+    $forbidden = [';', '&&', '`', '|', '$('];
+
+    $result = ['valid' => false, 'command' => null, 'error' => null];
+
+    $normalized = preg_replace('/\s+/', ' ', trim($command));
+
+    
+    foreach ($forbidden as $bad) {
+        if (strpos($normalized, $bad) !== false) {
+            $result['error'] = "Command contains forbidden operator: '$bad'";
+            return $result;
+        }
+    }
+
+    
+    if ($type === 'execute' && stripos($normalized, 'sudo') !== false) {
+        $result['error'] = "Execute commands must not include 'sudo'";
+        return $result;
+    }
+
+    // If it's a sudo command, strip leading sudo
+    if ($type === 'sudo') {
+        if (preg_match('/^sudo\s+(.*)$/i', $normalized, $matches)) {
+            $normalized = $matches[1]; 
+        }
+    }
+
+   
+
+    foreach ($allowedStarts as $allowed) {
+        if (stripos($normalized, $allowed) === 0) {
+            $result['valid'] = true;
+            $result['command'] = $normalized;
+            return $result;
+        }
+    }
+
+    $result['error'] = "Command not allowed: '$normalized'";
+    return $result;
+}
+
+
+// print_r(createAndRegisterBundle("testBundle", "web", "./"));
+?>

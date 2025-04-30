@@ -4,21 +4,18 @@ import RegisterPage from './Pages/RegisterPage';
 import LoginPage from './Pages/LoginPage';
 import HomePage from './Pages/HomePage';
 import SearchAllStocks from './Pages/SearchAllStocks';
-import axios from 'axios';
-import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom"; 
-import getBackendURL from "./Utils/backendURL";
 import ChartPage from "./Components/ChartPage";
-import { useParams } from 'react-router-dom';
+import axios from 'axios';
+import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
+import getBackendURL from "./Utils/backendURL";
 
 function App() {
   const [registering, setRegistering] = useState(false);
-  const [loggedIn, setLoggedIn] = useState(false); 
-  const [loading, setLoading] = useState(true);  
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [userInfo, setUserInfo] = useState(null);
 
   useEffect(() => {
-   
-  
     const validateSession = async () => {
       try {
         const response = await axios.post(
@@ -26,30 +23,22 @@ function App() {
           { type: "VALIDATE_SESSION" },
           { withCredentials: true }
         );
-  
-        
-          console.log("Session Validation Response:", response.data);
-          if (response.status === 200 && response.data && response.data.valid) {
-            console.log("User is logged in!");
-            setLoggedIn(true);
-            setUserInfo(response.data.user);
-          } else {
-            setLoggedIn(false);
-          }
-      
+
+        if (response.status === 200 && response.data && response.data.valid) {
+          setLoggedIn(true);
+          setUserInfo(response.data.user);
+        } else {
+          setLoggedIn(false);
+        }
       } catch (error) {
         console.error("Session validation error:", error);
       } finally {
         setLoading(false);
       }
     };
-  
-  
-    validateSession(); 
-    
-    
+
+    validateSession();
   }, []);
-  
 
   const handleLogout = async () => {
     try {
@@ -61,7 +50,7 @@ function App() {
 
       setUserInfo(null);
       setLoggedIn(false);
-     
+
       window.alert("You have been logged out.");
       window.location.href = "/";
     } catch (error) {
@@ -71,24 +60,30 @@ function App() {
 
   return (
     <Router basename="/">
-      <div className="App">
-        <h2>InvestZero!</h2>
-        <h4>Practice investing for free and learn to grow your wealth!</h4>
-
-        {loading ? (
-          <div>Loading...</div> 
+      <div className="App text-center w-100">
+      {loading ? (
+          <div className="d-flex justify-content-center align-items-center" style={{ height: '100vh' }}>
+            <div>Loading...</div>
+          </div>
         ) : (
           <Routes>
             <Route path="/" element={
               loggedIn ? (
                 <Navigate to="/home" replace />
               ) : (
-                <>
-                  {registering ? <RegisterPage /> : <LoginPage />}
-                  <button onClick={() => setRegistering(!registering)}>
-                    {registering ? "Already have an account? Login here!" : "Don't have an account? Register here!"}
-                  </button>
-                </>
+                <div className="d-flex justify-content-center align-items-center" >
+                  <div className="text-center w-100">
+                    {registering ? <RegisterPage /> : <LoginPage />}
+                    <button
+                      className="btn btn-primary mt-4"
+                      onClick={() => setRegistering(!registering)}
+                    >
+                      {registering
+                        ? "Already have an account? Login here!"
+                        : "Don't have an account? Register here!"}
+                    </button>
+                  </div>
+                </div>
               )
             } />
 
@@ -99,19 +94,20 @@ function App() {
                 <Navigate to="/" replace />
               )
             } />
-              <Route path="/searchallstocks" element={
-                loggedIn ? <SearchAllStocks user={userInfo} handleLogout={handleLogout} /> : <Navigate to="/"  /> 
-              } />
 
+            <Route path="/searchallstocks" element={
+              loggedIn ? (
+                <SearchAllStocks user={userInfo} handleLogout={handleLogout} />
+              ) : (
+                <Navigate to="/" />
+              )
+            } />
 
+            <Route path="/chartpage/:Ticker" element={
+              loggedIn ? <ChartPage handleLogout={handleLogout}/> : <Navigate to="/" />
+            } />
 
-              <Route path="/chartpage/:Ticker" element={loggedIn ? <ChartPage></ChartPage> : <Navigate to= "/"></Navigate>} />
-
-
-           
-            <Route path="*" element={<Navigate to="/"  />} />
-    
-
+            <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         )}
       </div>

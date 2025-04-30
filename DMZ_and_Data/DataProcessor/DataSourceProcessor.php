@@ -5,6 +5,7 @@ require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 require_once('data.php');
 require_once('CollectAllStocks.php');
+require_once('otp_utils.php');
 
 $i = 0;
 function requestProcessor($request)
@@ -33,6 +34,12 @@ function requestProcessor($request)
       return getStocksBasedOnRisk($request['risk'], $request['riskFactor']);
     case "FETCH_ALL_STOCKS":
         return fetchActiveStocks();
+    case "SEND_OTP_CODE":
+        // return buildResponse("SEND_OTP_CODE_RESPONSE", "SUCCESS", [
+        //     "message" => "OTP sent successfully" . $request['payload']["otpCode"],
+        // ]);
+        return sendOTP($request['payload']["phoneNumber"], $request['payload']["otpCode"]);
+    
   }
 
   return buildResponse("ERROR", "FAILED", ["message" => "Request type not supported"]);
