@@ -10,17 +10,17 @@ function logExternally($type, $text)
     $escapedText = escapeshellarg($text);
     $type = strtoupper($type);
     exec("php logEvent.php $type $escapedText > /dev/null 2>&1 &");
-    // file_put_contents("logEvent.log", "Log event executed: $type $escapedText\n", FILE_APPEND);
 }
 
 function requestProcessor($request)
 {
-    echo "received request" . PHP_EOL;
+    echo "Received request" . PHP_EOL;
     var_dump($request);
 
     if (!isset($request['type'])) {
-        logExternally("ERROR", "Missing request type");
-        return buildResponse("ERROR", "FAILED", ["message" => "Missing request type"]);
+        $msg = "Missing request type";
+        logExternally("ERROR", "Backend: $msg");
+        return buildResponse("ERROR", "FAILED", ["message" => $msg]);
     }
 
     $response = null;
@@ -83,20 +83,22 @@ function requestProcessor($request)
             break;
     }
 
-    // Logging every response
+
     $logType = ($response['status'] === "SUCCESS") ? "LOG" : "ERROR";
-    $logMessage = $response["payload"]["message"] ?? $response["payload"]["error"] ?? "error in databaseprocessor";
+    $logMessage = $response["payload"]["message"]
+        ?? $response["payload"]["error"]
+        ?? $response["message"]
+        ?? "Unhandled backend error";
 
-
-    logExternally($logType, $logMessage);
+    logExternally($logType, "Database-Backend: " . $logMessage);
 
     return $response;
 }
 
 $server = new rabbitMQServer("HatsRabbitMQ.ini", "Server");
 
-echo "testRabbitMQServer BEGIN" . PHP_EOL;
+echo "Backend Processor START" . PHP_EOL;
 $server->process_requests('requestProcessor');
-echo "testRabbitMQServer END" . PHP_EOL;
+echo "Backend Processor END" . PHP_EOL;
 exit();
 ?>
