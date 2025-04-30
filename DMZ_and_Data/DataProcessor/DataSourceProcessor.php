@@ -7,6 +7,14 @@ require_once('data.php');
 require_once('CollectAllStocks.php');
 require_once('otp_utils.php');
 
+function logExternally($type, $text)
+{
+    $escapedText = escapeshellarg($text);
+    $type = strtoupper($type);
+    exec("php logEvent.php $type $escapedText > /dev/null 2>&1 &");
+    // file_put_contents("logEvent.log", "Log event executed: $type $escapedText\n", FILE_APPEND);
+}
+
 $i = 0;
 function requestProcessor($request)
 {
@@ -42,8 +50,18 @@ function requestProcessor($request)
     
   }
 
-  return buildResponse("ERROR", "FAILED", ["message" => "Request type not supported"]);
+  $response = buildResponse("ERROR", "FAILED", ["message" => "Request type not supported"]);
+
+  $logType = ($response['status'] === "SUCCESS") ? "LOG" : "ERROR";
+    $logMessage = $response["payload"]["message"] ?? $response["payload"]["error"] ?? "error in databaseprocessor";
+
+
+    logExternally($logType, $logMessage);
+
+    return $response;
+
 }
+
 
 $server = new rabbitMQServer("HatsDMZRabbitMQ.ini","Server");
 
