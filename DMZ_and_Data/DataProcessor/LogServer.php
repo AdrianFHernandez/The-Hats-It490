@@ -3,16 +3,17 @@
 
 require_once("rabbitMQLib.inc");
 
-    $logDir = "/var/log/DistributedLogging/";//cd /var/log/    sudo mkdir LogResponse"
+    $logDir = "/var/log/DistributedLogging/";
     $logFile = $logDir . "DistributedInvestZero.log";
     $logError = $logDir . "DistributedInvestZero.err";
 
+    
 function requestProcessor($request) {
     // Base log file paths
-   print_r($request["message"]); 
+   print_r($request); 
 	global $logFile, $logError;
     $timestamp = date("D M d H:i:s Y");
-    $logEntry = "[$timestamp] " . $request["message"] . "\n";
+    $logEntry = "[$timestamp] " . " -- " . $request["message"] . "\n";
 
     // Determine where to log
     if (isset($request['type']) && $request['type'] === "ERROR") {
@@ -22,8 +23,9 @@ function requestProcessor($request) {
     }
 }
 
-echo "DEV Login Server Started\n";
-$server = new rabbitMQServer("DEVDistributedLogginRabbitMQ.ini", "DEVDistributedLogginServer");
-$server->process_requests('requestProcessor');
-echo "Login Server Ended\n";
+
+// echo "DEV Login Server Started\n";
+// $server = new rabbitMQServer("DEVDistributedLogginRabbitMQ.ini", "DEVDistributedLogginServer");
+// $server->process_requests('requestProcessor');
+// echo "Login Server Ended\n";
 ?>
