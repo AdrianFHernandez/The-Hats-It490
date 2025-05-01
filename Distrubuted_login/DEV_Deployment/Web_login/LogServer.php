@@ -11,8 +11,8 @@ function requestProcessor($request) {
     // Base log file paths
    print_r($request["message"]); 
 	global $logFile, $logError;
-    $timestamp = date("D M d H:i:s Y");
-    $logEntry = "[$timestamp] " . " -- Web -- " . $request["message"] . "\n";
+    $timestamp = $request["timestamp"];
+    $logEntry = "[$timestamp] " . " -- " . $request["message"] . "\n";
 
     // Determine where to log
     if (isset($request['type']) && $request['type'] === "Error") {

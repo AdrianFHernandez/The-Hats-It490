@@ -14,10 +14,11 @@ if (!in_array($logType, ['LOG', 'ERROR'])) {
 }
 
 $payload = [
-    'type' => $logType,
+	'type' => $logType,
+	'timestamp' => date("D M d H:i:s Y"),
+	'message' => $logText
 ];
 
-$payload['message'] = $logText;
 
 
 $client = new rabbitMQClient("DEVDistributedLogginRabbitMQ.ini", "DEVDistributedLogginServer");
