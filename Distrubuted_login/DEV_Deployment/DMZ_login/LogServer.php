@@ -3,7 +3,7 @@
 
 require_once("rabbitMQLib.inc");
 
-    $logDir = "/var/log/DistributedLogging/";//cd /var/log/    sudo mkdir LogResponse"
+    $logDir = "/var/log/DistributedLogging/";
     $logFile = $logDir . "DistributedInvestZero.log";
     $logError = $logDir . "DistributedInvestZero.err";
 
@@ -11,11 +11,11 @@ function requestProcessor($request) {
     // Base log file paths
    print_r($request["message"]); 
 	global $logFile, $logError;
-    $timestamp = date("D M d H:i:s Y");
-    $logEntry = "[$timestamp] " . $request["message"] . "\n";
+    $timestamp = $request["timestamp"];
+    $logEntry = "[$timestamp] " . " -- " . $request["message"] . "\n";
 
     // Determine where to log
-    if (isset($request['type']) && $request['type'] === "ERROR") {
+    if (isset($request['type']) && $request['type'] === "Error") {
         file_put_contents($logError, $logEntry, FILE_APPEND);
     } else {
         file_put_contents($logFile, $logEntry, FILE_APPEND);
