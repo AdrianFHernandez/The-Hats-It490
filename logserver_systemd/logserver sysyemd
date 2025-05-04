@@ -1,0 +1,22 @@
+sudo nano /etc/systemd/system/LogServer.service
+
+[Unit]
+Description = DMZ_and_Data LogServer
+After=network.target rabbitmq-server.service
+Required=rabbitmq-server.service
+
+[Service]
+
+User="your username"
+Group="your username"
+ExecStart=/usr/bin/php /home/$USER/git/The-Hats-It490/Distrubuted_login/DEV_Deployment/DMZ_login/LogServer.php
+WorkingDirectory=/home/$USER/git/The-Hats-It490/Distrubuted_login/DEV_Deployment/DMZ_login
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
+sudo systemctl daemon-reexec
+sudo systemctl daemon-reload
+sudo systemctl enable LogServer.service
