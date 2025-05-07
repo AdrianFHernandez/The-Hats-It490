@@ -23,6 +23,7 @@ function RiskProfileStockPicker() {
         );
       if (response.status === 200 && response.data) {
           setStocks(response.data.recommendedStocks);
+          setLoading(false);
           console.log("Stocks: ", stocks)
           console.log("Response.data.recoomended stocks: ", response.data.recommendedStocks);
 

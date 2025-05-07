@@ -34,6 +34,9 @@ const Navbar = ({ handleLogout }) => {
         <li className="nav-item">
           <Link className="nav-link" to="/chartpage/AAPL">Charts</Link>
         </li>
+        <li className="nav-item">
+          <Link className="nav-link" to="/news">News</Link>
+        </li>
       </ul>
       <button onClick={handleLogout} className="btn btn-danger">Logout</button>
     </div>
