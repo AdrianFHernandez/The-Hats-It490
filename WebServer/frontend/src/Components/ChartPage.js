@@ -1,163 +1,220 @@
 import React, { useEffect, useRef, useState } from "react";
-import { createChart, CrosshairMode, LineStyle, CandlestickSeries } from "lightweight-charts";
-import { useParams } from 'react-router-dom';
+import { CandlestickSeries, createChart, CrosshairMode, LineStyle } from "lightweight-charts";
+import { useParams } from "react-router-dom";
 import axios from "axios";
 import getBackendURL from "../Utils/backendURL";
 import Transaction from "./Transaction";
-import Navbar from "../Components/Navbar"; // Import Navbar
+import Navbar from "../Components/Navbar";
+import { Container, Row, Col, Form } from "react-bootstrap";
 
-function ChartPage() {
-    const { Ticker } = useParams();  
-    const containerRef = useRef(null);
-    const chartRef = useRef(null);
-    const [chartData, setChartData] = useState([]);
-    const [candlestickSeries, setCandlestickSeries] = useState(null);
-    const [timeframe, setTimeframe] = useState("1m");
-    const [selectedTicker, setSelectedTicker] = useState(Ticker);
-    const [stockInfo, setStockInfo] = useState(null);
+function ChartPage({ handleLogout }) {
+  const { Ticker } = useParams();
+  const containerRef = useRef(null);
+  const chartRef = useRef(null);
+  const candlestickSeriesRef = useRef(null);
+  const [rawData, setRawData] = useState([]);
+  const [chartData, setChartData] = useState([]);
+  const [timeframe, setTimeframe] = useState("1m");
+  const [selectedTicker, setSelectedTicker] = useState(Ticker);
+  const [stockInfo, setStockInfo] = useState(null);
+  const [isFetching, setIsFetching] = useState(false);
+  const [currentStartTime, setCurrentStartTime] = useState(null);
+  const fetchedRanges = useRef(new Set());
 
-    const aggregationIntervals = {
-        "1m": 60, "5m": 300, "30m": 1800, "1h": 3600, "4h": 14400
-    };
+  const aggregationIntervals = {
+    "1m": 60, "5m": 300, "30m": 1800, "1h": 3600, "4h": 14400
+  };
 
-    const fetchHistoricalData = async () => {
-        if (!selectedTicker) return;
+  const formatDate = (date) => date.toISOString().split("T")[0];
 
-        try {
-            const today = new Date();
-            const finalEndTime = today;
-            const finalStartTime = new Date(finalEndTime);
-            finalStartTime.setDate(finalEndTime.getDate() - 5);
+  const fetchHistoricalData = async (startTime = null) => {
+    if (!selectedTicker || isFetching) return;
 
-            const formattedStart = finalStartTime.toISOString().split("T")[0];
-            const formattedEnd = finalEndTime.toISOString().split("T")[0];
+    let finalEndTime = new Date();
+    let finalStartTime = new Date(finalEndTime.getTime() - 5 * 24 * 60 * 60 * 1000);
 
-            const response = await axios.post(
-                getBackendURL(),
-                { type: "FETCH_SPECIFIC_STOCK_DATA", ticker: selectedTicker, startTime: formattedStart, endTime: formattedEnd },
-                { withCredentials: true }
-            );
+    if (startTime) {
+      finalEndTime = new Date(startTime);
+      finalStartTime = new Date(finalEndTime.getTime() - 5 * 24 * 60 * 60 * 1000);
+    }
 
-            if (response.status === 200 && response.data.error) {
-                window.alert(`Polygon doesn't have data for ${selectedTicker}. Choose another stock.`);
-                window.history.back();
-                return;
-            }
+    const formattedStart = formatDate(finalStartTime);
+    const formattedEnd = formatDate(finalEndTime);
+    const rangeKey = `${formattedStart}_${formattedEnd}`;
 
-            if (response.status === 200 && response.data) {
-                console.log("Stock info:", response.data.chartData);
-                const stockInfo = response.data.stockInfo;
-                const newData = response.data.chartData.map(item => ({
-                    time: item.timestamp,
-                    open: parseFloat(item.open),
-                    high: parseFloat(item.high),
-                    low: parseFloat(item.low),
-                    close: parseFloat(item.close),
-                    volume: item.volume ? parseInt(item.volume, 10) : 0
-                }));
+    if (fetchedRanges.current.has(rangeKey)) return;
 
-                newData.sort((a, b) => a.time - b.time);
-                setStockInfo(stockInfo);
-                setChartData(newData);
-                chartRef.current.timeScale().fitContent();
-            }
-        } catch (error) {
-            console.error("Error fetching historical data:", error);
-        }
-    };
+    setIsFetching(true);
 
-    useEffect(() => {
-        console.log("Selected Ticker:", Ticker);
-        if (!containerRef.current) return;
+    try {
+      const response = await axios.post(getBackendURL(), {
+        type: "FETCH_SPECIFIC_STOCK_DATA",
+        ticker: selectedTicker,
+        startTime: formattedStart,
+        endTime: formattedEnd
+      }, { withCredentials: true });
 
-        // Initialize chart only once
-        const chart = createChart(containerRef.current, {
-            width: containerRef.current.clientWidth,
-            height: containerRef.current.clientHeight,
-        });
+      if (response.status === 200 && response.data) {
+        const stockInfo = response.data.stockInfo;
+        let newData = response.data.chartData.map(item => ({
+          time: parseInt(item.timestamp, 10),
+          open: parseFloat(item.open),
+          high: parseFloat(item.high),
+          low: parseFloat(item.low),
+          close: parseFloat(item.close),
+          volume: item.volume ? parseInt(item.volume, 10) : 0,
+        }));
 
-        chart.applyOptions({
-            layout: { attributionLogo: false },
-            crosshair: {
-                mode: CrosshairMode.Normal,
-                vertLine: { width: 2, color: "#C3BCDB44", style: LineStyle.Solid, labelBackgroundColor: "#FFFFFF" },
-            },
-            timeScale: { timeVisible: true, secondsVisible: false, rightOffset: 5 },
-        });
+        const uniqueData = Array.from(new Map(newData.map(item => [item.time, item])).values());
+        uniqueData.sort((a, b) => a.time - b.time);
 
-        const seriesInstance = chart.addSeries(CandlestickSeries, {
-            upColor: "#26a69a",
-            downColor: "#ef5350",
-            borderVisible: false,
-            wickUpColor: "#26a69a",
-            wickDownColor: "#ef5350",
-        });
+        setStockInfo(stockInfo);
+        setRawData((prev) => [...uniqueData, ...prev]);
+        fetchedRanges.current.add(rangeKey);
+        setCurrentStartTime(formatDate(new Date(finalStartTime.getTime() - 24 * 60 * 60 * 1000)));
+      }
+    } catch (error) {
+      console.error("Error fetching historical data:", error);
+    }
 
-        chartRef.current = chart;
-        setCandlestickSeries(seriesInstance);
+    setIsFetching(false);
+  };
 
-        return () => chart.remove(); // Cleanup chart on unmount
-    }, []);
+  const aggregateData = (data, timeframe) => {
+    const interval = aggregationIntervals[timeframe];
+    const aggregated = [];
+    let currentCandle = null;
 
-    useEffect(() => {
-        if (selectedTicker) {
-            fetchHistoricalData();
-        }
-    }, [selectedTicker]);
+    data.forEach(item => {
+      const timestamp = Math.floor(item.time / interval) * interval;
 
-    useEffect(() => {
-        if (!candlestickSeries || chartData.length === 0) return;
-
-        // Set data on chart when it is ready
-        const aggregatedData = aggregateData(chartData, timeframe);
-        candlestickSeries.setData(aggregatedData);
-    }, [chartData, candlestickSeries, timeframe]);
-
-    const aggregateData = (data, timeframe) => {
-        const interval = aggregationIntervals[timeframe];
-        const aggregated = [];
-        let currentCandle = null;
-
-        data.forEach(item => {
-            const timestamp = Math.floor(item.time / interval) * interval;
-            if (!currentCandle || currentCandle.time !== timestamp) {
-                if (currentCandle) aggregated.push(currentCandle);
-                currentCandle = { time: timestamp, open: item.open, high: item.high, low: item.low, close: item.close, volume: item.volume };
-            } else {
-                currentCandle.high = Math.max(currentCandle.high, item.high);
-                currentCandle.low = Math.min(currentCandle.low, item.low);
-                currentCandle.close = item.close;
-                currentCandle.volume += item.volume;
-            }
-        });
-
+      if (!currentCandle || currentCandle.time !== timestamp) {
         if (currentCandle) aggregated.push(currentCandle);
-        return aggregated;
+        currentCandle = {
+          time: timestamp,
+          open: item.open,
+          high: item.high,
+          low: item.low,
+          close: item.close,
+          volume: item.volume
+        };
+      } else {
+        currentCandle.high = Math.max(currentCandle.high, item.high);
+        currentCandle.low = Math.min(currentCandle.low, item.low);
+        currentCandle.close = item.close;
+        currentCandle.volume += item.volume;
+      }
+    });
+
+    if (currentCandle) aggregated.push(currentCandle);
+    return aggregated;
+  };
+
+  useEffect(() => {
+    if (rawData.length === 0) return;
+    const aggregatedData = aggregateData(rawData, timeframe);
+    setChartData(aggregatedData);
+  }, [timeframe, rawData]);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const chart = createChart(containerRef.current, {
+      width: containerRef.current.clientWidth,
+      height: containerRef.current.clientHeight,
+    });
+
+    chart.applyOptions({
+      layout: { attributionLogo: false },
+      crosshair: {
+        mode: CrosshairMode.Normal,
+        vertLine: {
+          width: 2, color: "#C3BCDB44", style: LineStyle.Solid,
+          labelBackgroundColor: "#FFFFFF"
+        },
+      },
+      timeScale: { timeVisible: true, secondsVisible: false, rightOffset: 5 },
+    });
+
+    const seriesInstance = chart.addSeries(CandlestickSeries, {
+      upColor: "#26a69a",
+      downColor: "#ef5350",
+      borderVisible: false,
+      wickUpColor: "#26a69a",
+      wickDownColor: "#ef5350",
+    });
+
+    chartRef.current = chart;
+    candlestickSeriesRef.current = seriesInstance;
+
+    const handleScroll = () => {
+      if (!chartRef.current || !candlestickSeriesRef.current || rawData.length === 0 || isFetching) return;
+      if (!chartRef.current.timeScale()) return;
+
+      const visibleRange = chartRef.current.timeScale().getVisibleRange();
+      if (!visibleRange || !visibleRange.from) return;
+
+      const firstDataPoint = rawData[0]?.time;
+      const leftEdgeTimestamp = visibleRange.from;
+      const THRESHOLD_SECONDS = aggregationIntervals[timeframe] * 2;
+
+      if (leftEdgeTimestamp <= firstDataPoint + THRESHOLD_SECONDS) {
+        fetchHistoricalData(currentStartTime);
+      }
     };
 
-    return (
-        <>
-            {/* Navbar Added Here */}
-            <Navbar handleLogout={() => window.location.href = "/"} />
+    chart.timeScale().subscribeVisibleLogicalRangeChange(handleScroll);
 
-            <div style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
-                <div className="ChartContainer" style={{ width: "95vw", height: "90vh", backgroundColor: "teal", position: "relative", padding: "2rem", display: "flex", flexDirection: "row" }}>
-                    <div className="TradingChart" ref={containerRef} style={{ width: "80%", height: "90%", position: "relative" }} />
-                    <div style={{ position: "absolute", top: "0px", left: "20px" }}>
-                        <select value={timeframe} onChange={e => setTimeframe(e.target.value)} style={{ padding: "5px", fontSize: "14px", borderRadius: "5px", border: "1px solid #ccc", backgroundColor: "#fff", cursor: "pointer" }}>
-                            <option value="1m">1 Minute</option>
-                            <option value="5m">5 Minutes</option>
-                            <option value="30m">30 Minutes</option>
-                            <option value="1h">1 Hour</option>
-                            <option value="4h">4 Hour</option>
-                        </select>
-                    </div>
-                </div>
+    return () => {
+      if (chartRef.current) {
+        chart.timeScale().unsubscribeVisibleLogicalRangeChange(handleScroll);
+        chartRef.current.remove();
+        chartRef.current = null;
+        candlestickSeriesRef.current = null;
+      }
+    };
+  }, [chartData]);
 
-                {stockInfo && (<Transaction stockData={stockInfo} chartData={chartData} />)}
+  useEffect(() => {
+    if (selectedTicker) fetchHistoricalData();
+  }, [selectedTicker]);
+
+  useEffect(() => {
+    if (!candlestickSeriesRef.current || chartData.length === 0) return;
+    candlestickSeriesRef.current.setData(chartData);
+  }, [chartData]);
+
+  return (
+    <>
+      <Navbar handleLogout={handleLogout} />
+      <Container fluid className="mt-4 bg-transparent px-3">
+        <Row>
+          <Col xs={12} lg={8}>
+            <div className="position-relative bg-dark rounded p-3" style={{ height: "75vh" }}>
+              <div className="position-absolute top-0 start-0 m-3">
+                <Form.Select
+                  value={timeframe}
+                  onChange={(e) => setTimeframe(e.target.value)}
+                  size="sm"
+                  className="w-auto"
+                >
+                  <option value="1m">1 Minute</option>
+                  <option value="5m">5 Minutes</option>
+                  <option value="30m">30 Minutes</option>
+                  <option value="1h">1 Hour</option>
+                  <option value="4h">4 Hour</option>
+                </Form.Select>
+              </div>
+              <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
             </div>
-        </>
-    );
+          </Col>
+          <Col xs={12} lg={4} className="mt-4 mt-lg-0">
+            {stockInfo && <Transaction stockData={stockInfo} chartData={chartData} />}
+          </Col>
+        </Row>
+      </Container>
+    </>
+  );
 }
 
 export default ChartPage;

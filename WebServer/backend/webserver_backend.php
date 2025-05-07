@@ -1,99 +1,105 @@
 <?php
 // CORS Headers
-header('Access-Control-Allow-Origin: http://localhost:3000'); // Update if frontend is deployed
-header('Access-Control-Allow-Credentials: true');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
-header('Content-Type: application/json');
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
+$allowed_origins = [
+    'https://localhost:3000',
+    "https://www.investzero.com"
+];
 
-// Handle preflight request
+if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
+    header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
+    header("Access-Control-Allow-Credentials: true");
+    header("Access-Control-Allow-Methods: POST, OPTIONS");
+    header("Access-Control-Allow-Headers: Content-Type, Authorization");
+    header("Content-Type: application/json");
+} else {
+    http_response_code(403);
+    echo json_encode(['error' => 'Unauthorized origin']);
+    exit;
+}
+
 if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
     http_response_code(200);
     exit();
 }
 
-
-// Include RabbitMQ connection
 require_once('path.inc');
 require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
+require_once(__DIR__ . '/vendor/autoload.php');
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
+function logExternally($type, $text) {
+    $escapedText = escapeshellarg($text);
+    $type = strtoupper($type);
+    exec("php logEvent.php $type $escapedText > /dev/null 2>&1 &");
+}
 
-require '/home/ubuntu/Desktop/The-Hats-It490/WebServer/backend/vendor/autoload.php';  // Use absolute path
-
-
-// Decode incoming JSON request
 $data = json_decode(file_get_contents("php://input"), true);
-
-// Ensure valid request
 if (!$data || !isset($data['type'])) {
-    echo json_encode(["error" => "Invalid request check", "data" => $data]);
+    logExternally("ERROR", "Frontend: Invalid request received");
+    echo json_encode(["error" => "Invalid request"]);
     exit();
 }
 
 $client = null;
-
-function get_client(){
+function get_client() {
     global $client;
-    if($client == null){
+    if ($client == null) {
         $client = new rabbitMQClient("HatsRabbitMQ.ini", "Server");
     }
     return $client;
 }
 
-function buildRequest($type, $payload = []){
-    return [
-        "type" => $type,
-        "timestamp" => time(),
-        "payload" => $payload
-    ];
+function buildRequest($type, $payload = []) {
+    return ["type" => $type, "timestamp" => time(), "payload" => $payload];
 }
 
-// Function to handle user registration
 function handleRegister($data) {
     $name = $data['name'] ?? '';
     $username = $data['username'] ?? '';
     $email = $data['email'] ?? '';
     $password = $data['password'] ?? '';
+    $phone = $data['phone'] ?? '';
 
     if (!$name || !$username || !$email || !$password) {
-        echo json_encode(["error" => "All fields are required"]);
+        $msg = "All fields are required";
+        logExternally("ERROR", "Frontend: Registration failed - $msg");
+        echo json_encode(["error" => $msg]);
         exit();
     }
 
-    // Send registration request to RabbitMQ
     $client = get_client();
-
     $request = buildRequest('REGISTER', [
         'name' => $name,
         'username' => $username,
         'email' => $email,
-        'password' => $password
+        'password' => $password,
+        'phone' => $phone
     ]);
-
 
     $response = $client->send_request($request);
 
     if ($response && $response['status'] === 'SUCCESS' && $response["type"] === "REGISTER_RESPONSE") {
+        logExternally("LOG", "Frontend: Registration success - $username");
         echo json_encode(["success" => true, "message" => $response['payload']['message']]);
     } else {
-        echo json_encode(["error" => $response['payload']['message'] ?? "Registration failed"]);
+        $msg = $response['payload']['message'] ?? "Registration failed";
+        logExternally("ERROR", "Frontend: Registration failed - $msg");
+        echo json_encode(["error" => $msg]);
     }
 }
 
-// Function to handle login
 function handleLogin($data) {
     $username = $data['username'] ?? '';
     $password = $data['password'] ?? '';
 
     if (!$username || !$password) {
+        logExternally("ERROR", "Frontend: Login failed - Missing credentials");
         echo json_encode(["error" => "Username and password are required"]);
         exit();
     }
 
-    // Send login request to RabbitMQ
     $client = get_client();
     $request = buildRequest('LOGIN', [
         'username' => $username,
@@ -103,153 +109,207 @@ function handleLogin($data) {
     $response = $client->send_request($request);
 
     if ($response && $response['status'] === "SUCCESS" && $response['type'] === 'LOGIN_RESPONSE') {
-        $session_id = $response["payload"]['session']['sessionId'];
-        $session_expires = $response["payload"]['session']['expiresAt'];
-        // set session_id in browser cookie with same site attribute as None
-        
-        setcookie("PHPSESSID", $session_id, [
-            "expires" => $session_expires,
-            "path" => "/",
-            "domain" => "www.sample.com",
-            "secure" => false, // change to false for http testing
-            "httponly" => true,
-            "samesite" => "lax" // lax
-        ]);
-
+        logExternally("LOG", "Frontend: OTP sent for login - $username");
         echo json_encode([
             "success" => true,
-             "sessionId" => $session_id,
-             "user" => $response["payload"]['user'],
-             "message" => $response["payload"]['message']
+            "message" => $response["payload"]['message']
         ]);
     } else {
-        echo json_encode(["error" => "Invalid username or password"]);
+        $msg = $response['payload']['error'] ?? "Login failed";
+        logExternally("ERROR", "Frontend: OTP sending failed for Login - $msg");
+        echo json_encode(["error" => $msg]);
     }
 }
 
-// Function to validate session
+
 function handleValidateSession() {
     if (!isset($_COOKIE['PHPSESSID'])) {
+        logExternally("ERROR", "Frontend: Session validation failed - cookie not set");
         echo json_encode(["valid" => false, "error" => "Session cookie not set"]);
         exit();
     }
-    
-    // Send session validation request to RabbitMQ
-    $client = get_client();
-    $request = buildRequest('VALIDATE_SESSION', [
-        'sessionId' => $_COOKIE['PHPSESSID']
-    ]);
 
+    $client = get_client();
+    $request = buildRequest('VALIDATE_SESSION', ['sessionId' => $_COOKIE['PHPSESSID']]);
     $response = $client->send_request($request);
-    
-    // echo json_encode($response);
+
     if ($response && $response["status"] === "SUCCESS" && $response["type"] === "VALIDATE_SESSION_RESPONSE") {
-        echo json_encode([
-            "valid" => true,
-            "user" => $response["payload"]['user']
-        ]);
+        logExternally("LOG", "Frontend: Session validated for user");
+        echo json_encode(["valid" => true, "user" => $response["payload"]['user']]);
     } else {
-        // Clear session cookie
+        logExternally("ERROR", "Frontend: Invalid session during validation");
         setcookie("PHPSESSID", "", [
             "expires" => -1,
             "path" => "/",
-            "domain" => "www.sample.com",
-            "secure" => false,
-            "httponly" => true,
-            "samesite" => "lax"
+            "domain" => "www.investzero.com",
+            "secure" => true,
+            "httponly" => false,
+            "samesite" => "None"
         ]);
-        echo json_encode(["valid" => false, "error" => "Invalid or expired sesasion"]);
+        echo json_encode(["valid" => false, "error" => "Invalid or expired session"]);
     }
-
-    
 }
 
-// Function to handle logout
-function handleLogout() {
-    // Send logout request to RabbitMQ
-    if (!isset($_COOKIE['PHPSESSID'])) {
-        echo json_encode(["success" => true, "message" => "Session cookie not set"]);
+
+function handleVerifyOTP($data) {
+    $OTP_code = $data['OTP_code'] ?? '';
+    if (!$OTP_code) {
+        logExternally("ERROR", "Frontend: OTP verification failed - No code provided");
+        echo json_encode(["error" => "OTP code is required"]);
         exit();
+    }
+
+    $client = get_client();
+    $request = buildRequest('VERIFY_OTP', ['OTP_code' => $OTP_code]);
+    $response = $client->send_request($request);
+
+    if ($response && $response['status'] === "SUCCESS" && $response['type'] === 'VERIFY_OTP_RESPONSE') {
+        $session_id = $response["payload"]['session']['sessionId'];
+        $session_expires = $response["payload"]['session']['expiresAt'];
+        setcookie("PHPSESSID", $session_id, [
+            "expires" => $session_expires,
+            "path" => "/",
+            "domain" => "www.investzero.com",
+            "secure" => true,
+            "httponly" => false,
+            "samesite" => "None"
+        ]);
+        logExternally("LOG", "Frontend: OTP verified");
+        echo json_encode([
+            "success" => true,
+            "sessionId" => $session_id,
+            "user" => $response["payload"]['user'],
+            "message" => $response["payload"]['message']
+        ]);
+    } else {
+        logExternally("ERROR", "Frontend: OTP verification failed");
+        echo json_encode(["error" => "Invalid OTP Code"]);
+    }
+}
+
+
+function handleLogout() {
+    if (!isset($_COOKIE['PHPSESSID'])) {
+        logExternally("ERROR", "Frontend: Logout - session cookie not set");
+        echo json_encode(["success" => true, "message" => "Session cookie not set"]);
+        return;
     }
 
     $client = get_client();
     $request = buildRequest('LOGOUT', [
         'sessionId' => $_COOKIE['PHPSESSID']
     ]);
-    
+
     $response = $client->send_request($request);
 
     if ($response && $response['status'] === "SUCCESS" && $response['type'] === 'LOGOUT_RESPONSE') {
-        // Clear session cookie
-        //Test cookie setting over http
+        logExternally("LOG", "Frontend: Logout successful");
         setcookie("PHPSESSID", "", [
             "expires" => -1,
             "path" => "/",
-            "domain" => "www.sample.com",
-            "secure" => false,
-            "httponly" => true,
-            "samesite" => "lax"
+            "domain" => "www.investzero.com",
+            "secure" => true,
+            "httponly" => false,
+            "samesite" => "None"
         ]);
-        
         echo json_encode(["success" => true, "message" => $response['message']]);
     } else {
+        logExternally("ERROR", "Frontend: Logout failed");
         echo json_encode(["error" => "Logout failed"]);
     }
-    
 }
 
-function handleGetAccountInfo(){
-    // Send logout request to RabbitMQ
+
+function handleGetAccountInfo() {
     if (!isset($_COOKIE['PHPSESSID'])) {
-        echo json_encode(["success" => true, "message" => "Session cookie not set"]);
-        exit();
+        logExternally("ERROR", "Frontend: GetAccountInfo - session cookie not set");
+        echo json_encode(["success" => false, "message" => "Session cookie not set"]);
+        return;
     }
-    
+
     $client = get_client();
     $request = buildRequest('GET_ACCOUNT_INFO', [
         'sessionId' => $_COOKIE['PHPSESSID']
     ]);
-    
+
     $response = $client->send_request($request);
 
-    ob_clean();
     if ($response && $response["status"] === "SUCCESS" && $response["type"] === "GET_ACCOUNT_INFO_RESPONSE") {
-        $payload = $response["payload"];
-        echo json_encode($payload["data"]);
-           
-    
-
-    // EXPECTING SOMETHING LIKE THIS:
-    // return response = {
-    //     "user" : {
-    //         "userStocks" : {
-    //             "TSLA": {
-    //                "companyName" : "Tesla",
-    //                "companyDescription": "This company does this ...",
-    //                "count" : 2,
-    //                "averagePrice" : 300
-    //             },
-    //             "VOO" : {
-    //                 "count" : 1,
-    //                 "avergaePrice" : 390
-    //             }
-    //         },
-    //         "userBalance": {
-    //             "cashBalance": 10, 
-    //             "stockBalance": 990,
-    //             "totalBalance" : 1000
-    //         }
-    //     }
-    // }
-        
+        logExternally("LOG", "Frontend: Retrieved account info");
+        echo json_encode($response["payload"]["data"]);
     } else {
-        echo json_encode(["valid" => false, "error" => "Invalid or expired sesasion"]);
+        logExternally("ERROR", "Frontend: Failed to retrieve account info");
+        echo json_encode(["success" => false, "error" => "Invalid or expired session"]);
     }
-
 }
 
-function handlePerformTransaction($data) {
+function handleGetStockInfo($data){
+    $ticker = $data["ticker"] ?? '';
+    $marketCapMin = $data["marketCapMin"] ?? '';
+    $marketCapMax = $data["marketCapMax"] ?? '';
+
     if (!isset($_COOKIE['PHPSESSID'])) {
+        logExternally("ERROR", "Frontend: Get stock info - session cookie not set");
+        echo json_encode(["valid" => false, "message" => "Session cookie not set"]);
+        exit();
+    }
+
+    $client = get_client();
+    $request = buildRequest('GET_STOCK_INFO', [
+        'sessionId' => $_COOKIE['PHPSESSID'],
+        'ticker' => $ticker,
+        'marketCapMin' => $marketCapMin,
+        'marketCapMax' => $marketCapMax
+    ]);
+
+    $response = $client->send_request($request);
+
+    if ($response && $response["status"] === "SUCCESS" && $response["type"] === "GET_STOCK_INFO_RESPONSE") {
+        logExternally("LOG", "Frontend: Retrieved stock info for $ticker");
+        echo json_encode($response["payload"]["data"]);
+    } else {
+        logExternally("ERROR", "Frontend: Failed to retrieve stock info");
+        echo json_encode(["message" => $response["payload"]["message"] ?? "Failed to fetch stock info"]);
+    }
+}
+
+function handleFetchSpecificStockData($data){
+    $ticker = $data["ticker"] ?? '';
+    $start = $data["startTime"] ?? '';
+    $end = $data["endTime"] ?? '';
+
+    if (!$ticker || !$start || !$end) {
+        logExternally("ERROR", "Frontend: Fetch specific stock data - missing params");
+        echo json_encode(["error" => "Invalid request"]);
+        exit();
+    }
+
+    $client = get_client();
+    $request = buildRequest('FETCH_SPECIFIC_STOCK_DATA', [
+        'sessionId' => $_COOKIE['PHPSESSID'],
+        'ticker' => $ticker,
+        'start' => $start,
+        'end' => $end
+    ]);
+
+    $response = $client->send_request($request);
+
+    if ($response && $response["status"] === "SUCCESS" && $response["type"] === "FETCH_SPECIFIC_STOCK_DATA_RESPONSE") {
+        logExternally("LOG", "Frontend: Fetched specific data for $ticker");
+        echo json_encode([
+            "message" => $response["payload"]["message"],
+            "chartData" => $response["payload"]["data"]["stockData"],
+            "stockInfo" => $response["payload"]["data"]["stockInfo"]
+        ]);
+    } else {
+        logExternally("ERROR", "Frontend: Failed to fetch specific stock data");
+        echo json_encode(["error" => "Failed to fetch stock data"]);
+    }
+}
+
+function handlePerformTransaction($data){
+    if (!isset($_COOKIE['PHPSESSID'])) {
+        logExternally("ERROR", "Frontend: Perform transaction - session cookie not set");
         echo json_encode(["success" => false, "message" => "Session cookie not set"]);
         exit();
     }
@@ -258,6 +318,7 @@ function handlePerformTransaction($data) {
     $quantity = $data["quantity"];
     $price = $data["price"];
     $transactionType = $data["transactionType"];
+
     $client = get_client();
     $request = buildRequest('PERFORM_TRANSACTION', [
         'sessionId' => $_COOKIE['PHPSESSID'],
@@ -271,31 +332,27 @@ function handlePerformTransaction($data) {
 
     if ($response && $response["status"] === "SUCCESS" && $response["type"] === "PERFORM_TRANSACTION_RESPONSE") {
         $user = $response["payload"]["user"];
-        $email = $user["email"] ?? null; // Ensure email exists
+        $email = $user["email"] ?? null;
         $username = $user["name"] ?? "User";
 
         if ($email) {
-            // Create PHPMailer instance
             $mail = new PHPMailer(true);
             try {
-                // SMTP Configuration
                 $mail->isSMTP();
-                $mail->Host = 'smtp.gmail.com'; // SMTP Server (Gmail)
+                $mail->Host = 'smtp.gmail.com';
                 $mail->SMTPAuth = true;
-                $mail->Username = 'hatsit490@gmail.com'; // Your Gmail
-                $mail->Password = 'dmft jzxc ilqk xgqy'; // Generate an App Password (DO NOT USE YOUR MAIN PASSWORD)
+                $mail->Username = 'hatsit490@gmail.com';
+                $mail->Password = 'dmft jzxc ilqk xgqy';
                 $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
                 $mail->Port = 587;
 
-                // Email Details
-                $mail->setFrom('your-email@gmail.com', 'Your Name');
+                $mail->setFrom('hatsit490@gmail.com', 'InvestZero');
                 $mail->addAddress($email, $username);
                 $mail->Subject = "Transaction Confirmation - $ticker";
                 $mail->Body = "Hello $username,\n\nYour transaction for $quantity shares of $ticker at $$price has been successfully processed.\n\nTransaction Type: $transactionType\n\nThank you for using our service!";
 
-                // Send the email
                 $mail->send();
-
+                logExternally("LOG", "Frontend: Transaction completed and email sent to $email");
                 echo json_encode([
                     "success" => true,
                     "message" => $response["payload"]["message"],
@@ -303,6 +360,7 @@ function handlePerformTransaction($data) {
                     "user" => $user
                 ]);
             } catch (Exception $e) {
+                logExternally("ERROR", "Frontend: Email failed for $email - {$mail->ErrorInfo}");
                 echo json_encode([
                     "success" => true,
                     "message" => $response["payload"]["message"],
@@ -311,6 +369,7 @@ function handlePerformTransaction($data) {
                 ]);
             }
         } else {
+            logExternally("ERROR", "Frontend: No email address to send transaction receipt");
             echo json_encode([
                 "success" => true,
                 "message" => $response["payload"]["message"],
@@ -319,75 +378,10 @@ function handlePerformTransaction($data) {
             ]);
         }
     } else {
+        logExternally("ERROR", "Frontend: Transaction failed for $ticker");
         echo json_encode(["error" => $response["payload"]["message"] ?? "Transaction failed"]);
     }
 }
-
-function handleGetStockInfo($data){
-    $ticker = $data["ticker"] ?? '';
-    $marketCapMin = $data["marketCapMin"] ?? '';
-    $marketCapMax = $data["marketCapMax"] ?? '';
-    // Send logout request to RabbitMQ
-    if (!isset($_COOKIE['PHPSESSID'])) {
-        echo json_encode(["valid" => false, "message" => "Session cookie not set"]);
-        exit();
-    }
-     
-   
-    $client = get_client();
-    
-
-    $request = buildRequest('GET_STOCK_INFO', [
-        'sessionId' => $_COOKIE['PHPSESSID'],
-        'ticker' => $ticker,
-        'marketCapMin' => $marketCapMin,
-        'marketCapMax' => $marketCapMax
-    ]);
-    
-    $response = $client->send_request($request);
-    
-    if ($response && $response["status"] === "SUCCESS" && $response["type"] === "GET_STOCK_INFO_RESPONSE") {
-        ob_clean();
-        echo json_encode(
-            $response["payload"]["data"]
-        );
-    }
-    else{
-        echo json_encode(["message" => $response["payload"]["message"] ?? "Failed to fetch stock info"]);
-    }
-
-
-}
-
-function handleFetchSpecificStockData( $data ){
-    $ticker = $data["ticker"] ?? '';
-    $start = $data["startTime"] ?? '';
-    $end = $data["endTime"] ?? '';
-    if (!$ticker || !$start || !$end) {
-        echo json_encode(["error" => "Invalid request"]);
-        exit();
-    }
-    $client = get_client();
-    $request = buildRequest('FETCH_SPECIFIC_STOCK_DATA', [
-        'sessionId' => $_COOKIE['PHPSESSID'],
-        'ticker' => $ticker,
-        'start' => $start,
-        'end' => $end
-    ]);
-
-    $response = $client->send_request($request);
-    if ($response && $response["status"] === "SUCCESS" && $response["type"] === "FETCH_SPECIFIC_STOCK_DATA_RESPONSE") {
-        echo json_encode([
-            "message" => $response["payload"]["message"],
-            "chartData" => $response["payload"]["data"]["stockData"],
-            "stockInfo" => $response["payload"]["data"]["stockInfo"]
-        ]);
-    } else {
-        echo json_encode(["error" => "Failed to fetch stock data"]);
-    }
-
-}
-
 
 function handleGetRecommendedStocks($data){
     $riskLevel = $data["riskLevel"] ?? '';
@@ -457,35 +451,17 @@ function handleGetNews(){
     }
 }
 
-// Process API requests
+
 switch ($data['type']) {
-    case 'REGISTER':
-        handleRegister($data);
-        break;
-    case 'LOGIN':
-        handleLogin($data);
-        break;
-    case 'VALIDATE_SESSION':
-        handleValidateSession();
-        break;
-    case 'LOGOUT':
-        handleLogout();
-        break;
-    case 'GET_ACCOUNT_INFO':
-        handleGetAccountInfo();
-        break;
-    case 'GET_STOCK_INFO':
-        handleGetStockInfo($data);
-        break;
-    case 'GET_STOCKS_BASED_ON_RISK':
-        handleGetStocksBasedOnRisk($data);
-        break;
-    case 'FETCH_SPECIFIC_STOCK_DATA':
-        handleFetchSpecificStockData($data);
-        break;
-    case 'PERFORM_TRANSACTION':
-        handlePerformTransaction($data);
-        break;
+    case 'REGISTER': handleRegister($data); break;
+    case 'LOGIN': handleLogin($data); break;
+    case 'VALIDATE_SESSION': handleValidateSession(); break;
+    case 'LOGOUT': handleLogout(); break;
+    case 'GET_ACCOUNT_INFO': handleGetAccountInfo(); break;
+    case 'GET_STOCK_INFO': handleGetStockInfo($data); break;
+    case 'FETCH_SPECIFIC_STOCK_DATA': handleFetchSpecificStockData($data); break;
+    case "PERFORM_TRANSACTION": handlePerformTransaction($data); break;
+    case "VERIFY_OTP": handleVerifyOTP($data); break;
     case "GET_RECOMMENDED_STOCKS":
         handleGetRecommendedStocks($data);
         break;
@@ -496,7 +472,9 @@ switch ($data['type']) {
         handleGetNews();
         break;
     default:
-        echo json_encode(["error" => "Unknown request type --"]);
+        logExternally("ERROR", "Frontend: Unknown request type: " . $data['type']);
+        echo json_encode(["error" => "Unknown request type"]);
         break;
 }
 ?>
+

@@ -11,6 +11,10 @@ apiKey
 /.pnp
 .pnp.js
 
+vendor/
+composer.lock
+.env
+
 # testing
 /coverage
 

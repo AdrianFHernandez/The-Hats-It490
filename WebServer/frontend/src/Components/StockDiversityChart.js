@@ -1,43 +1,44 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
 
 const StockDiversityChart = ({ userStocks }) => {
-  console.log("Received userStocks in StockDiversityChart:", userStocks);
-
   if (!userStocks || Object.keys(userStocks).length === 0) {
-    return <p>No stocks owned.</p>;
+    return <p className="text-center">No stocks owned.</p>;
   }
 
   const stockEntries = Object.entries(userStocks).map(([ticker, stock]) => ({
-    name: stock.companyName || ticker, // Ensure name exists
-    value: stock.count > 0 ? stock.count : 1, // Ensure value is never 0 or null
+    name: stock.companyName || ticker,
+    value: stock.count > 0 ? stock.count : 1,
   }));
-  
-
-  console.log("Processed stockEntries:", stockEntries);
 
   const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
 
   return (
-    <div style={{ textAlign: "center" }}>
-      <h2>Stock Diversity</h2>
-      <PieChart width={400} height={400}>
-      <Pie
+    <div className="text-center">
+      <h4 className="mb-4 text-light">Stock Diversity</h4>
+      <div className="d-flex justify-content-center">
+        <PieChart width={300} height={360}>
+          <Pie
             data={stockEntries}
-            dataKey="value"  // This should match the processed data structure
+            dataKey="value"
             cx="50%"
-            cy="50%"
-            outerRadius={120}
+            cy="40%"
+            outerRadius={100}
             fill="#8884d8"
-            // label={({ name, percent }) => `${name} (${(percent * 100).toFixed(1)}%)`}
-        >
-          {stockEntries.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-          ))}
-        </Pie>
-        <Tooltip />
-        <Legend />
-      </PieChart>
+          >
+            {stockEntries.map((entry, index) => (
+              <Cell
+                key={`cell-${index}`}
+                fill={COLORS[index % COLORS.length]}
+              />
+            ))}
+          </Pie>
+
+          <Tooltip />
+
+          <Legend verticalAlign="bottom" wrapperStyle={{ marginTop: 30 }} />
+        </PieChart>
+      </div>
     </div>
   );
 };

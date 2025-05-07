@@ -16,7 +16,10 @@ function getClientForDMZ()
 }
 
 
-function buildRequest($type, $payload = []){
+
+
+function buildRequest($type, $payload = [])
+{
     return [
         "type" => $type,
         "timestamp" => time(),
@@ -46,9 +49,10 @@ function dbConnect()
 }
 
 
-function doRegister($name, $username, $email, $password)
+function doRegister($name, $username, $email, $password, $phone)
 {
     $conn = dbConnect();
+    
 
     // Check if username or email already exists
     $stmt = $conn->prepare("SELECT userID FROM Users WHERE username = ? OR email = ?");
@@ -67,8 +71,8 @@ function doRegister($name, $username, $email, $password)
     $createdAt = time(); // Store epoch timestamp
 
     // Insert user into database
-    $stmt = $conn->prepare("INSERT INTO Users (username, email, password, created_at, name) VALUES (?, ?, ?, ?, ?)");
-    $stmt->bind_param("sssis", $username, $email, $hashedpass, $createdAt, $name);
+    $stmt = $conn->prepare("INSERT INTO Users (username, email, password, phone, created_at, name) VALUES (?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("ssssis", $username, $email, $hashedpass, $phone, $createdAt, $name);
 
     if ($stmt->execute()) {
         $user_id = $stmt->insert_id;
@@ -102,6 +106,67 @@ function doRegister($name, $username, $email, $password)
 }
 
 
+function verifyOTP($otp_code)
+{
+    $conn = dbConnect();
+    $current_time = time();
+
+    // Step 1: Find user linked to valid, unexpired OTP
+    $stmt = $conn->prepare("
+        SELECT userID 
+        FROM OTPs 
+        WHERE otp_code = ? AND expires_at >= ? AND is_used = FALSE
+        ORDER BY otp_id DESC LIMIT 1
+    ");
+    $stmt->bind_param("si", $otp_code, $current_time);
+    $stmt->execute();
+    $stmt->store_result();
+
+    if ($stmt->num_rows > 0) {
+        $stmt->bind_result($userID);
+        $stmt->fetch();
+        $stmt->close();
+
+        // Step 2: Mark OTP as used
+        $updateStmt = $conn->prepare("UPDATE OTPs SET is_used = TRUE WHERE otp_code = ?");
+        $updateStmt->bind_param("s", $otp_code);
+        $updateStmt->execute();
+        $updateStmt->close();
+
+        // Step 3: Fetch user data
+        $userStmt = $conn->prepare("
+            SELECT username, email, created_at 
+            FROM Users 
+            WHERE userID = ?
+        ");
+        $userStmt->bind_param("i", $userID);
+        $userStmt->execute();
+        $userStmt->store_result();
+
+        if ($userStmt->num_rows > 0) {
+            $userStmt->bind_result($username, $email, $createdAt);
+            $userStmt->fetch();
+            $userStmt->close();
+            $conn->close();
+
+            return buildResponse("VERIFY_OTP_RESPONSE", "SUCCESS", [
+                "message" => "OTP verified successfully",
+                "user" => [
+                    "id" => $userID,
+                    "username" => $username,
+                    "email" => $email,
+                    "created_at" => $createdAt
+                ]
+            ]);
+        } else {
+            $userStmt->close();
+        }
+    }
+
+    $conn->close();
+    return buildResponse("VERIFY_OTP_RESPONSE", "FAILED", ["message" => "Invalid or expired OTP"]);
+}
+
 
 
 
@@ -110,28 +175,43 @@ function doLogin($username, $password)
     $conn = dbConnect();
 
     // Get user from database
-    $stmt = $conn->prepare("SELECT userID, password, email, created_at FROM Users WHERE username = ?");
+    $stmt = $conn->prepare("SELECT userID, password, email, phone, created_at FROM Users WHERE username = ?");
     $stmt->bind_param("s", $username);
     $stmt->execute();
     $stmt->store_result();
 
     if ($stmt->num_rows > 0) {
-        $stmt->bind_result($id, $hashedpass, $email, $createdAt);
+        $stmt->bind_result($id, $hashedpass, $email, $phone, $createdAt);
         $stmt->fetch();
 
         if (password_verify($password, $hashedpass)) {
+            
+
+            //GENERATE OTP CODE and link to a user in the db;
+            $otp_code = rand(100000, 999999);
+            $expires_at = time() + 120; // 120 seconds expiry
+            // otp_code_string
+            $otp_code_string = strval($otp_code);
+
+            // Save OTP to database
+            $stmt = $conn->prepare("INSERT INTO OTPs (userID, otp_code, expires_at) VALUES (?, ?, ?)");
+            $stmt->bind_param("isi", $id, $otp_code_string, $expires_at);
+            $stmt->execute();
             $stmt->close();
             $conn->close();
-            
-            return buildResponse("LOGIN_RESPONSE", "SUCCESS", [
-                "message" => "Login successful",
-                "user" => [
-                    "id" => $id,
-                    "username" => $username,
-                    "email" => $email,
-                    "created_at" => $createdAt
-                ]
-            ]);
+
+
+            //Connect to dmz to send OTP
+            $client = getClientForDMZ();
+            $request = buildRequest("SEND_OTP_CODE", ["phoneNumber" => $phone, "otpCode" => $otp_code]);
+            $response = $client->send_request($request);
+            if ($response["status"] !== "SUCCESS") {
+                return buildResponse("LOGIN_RESPONSE", "FAILED", ["error" => $response["payload"]["error"]]);
+            } else {
+                return buildResponse("LOGIN_RESPONSE", "SUCCESS", [
+                    "message" => "OTP sent to your phone ending in " . substr($phone, -4),
+                ]);
+            }
         }
     }
 
@@ -167,6 +247,7 @@ function validateSession($sessionId)
 
         return buildResponse("VALIDATE_SESSION_RESPONSE", "SUCCESS", [
             "valid" => true,
+            "message" => "Validation of user -$username- is sucess",
             "user" => [
                 "id" => $userId,
                 "username" => $username,
@@ -254,7 +335,7 @@ function doGetAccountInfo($sessionId)
 
     // Step 3: Fetch user's stock holdings
     $stmt = $conn->prepare("
-        SELECT p.ticker, s.name, s.description, p.quantity, p.average_price
+        SELECT p.ticker, s.name, s.description, p.quantity, p.average_price, s.price AS current_price
         FROM Portfolios p
         JOIN Stocks s ON p.ticker = s.ticker
         WHERE p.account_id = ?
@@ -272,25 +353,38 @@ function doGetAccountInfo($sessionId)
             "companyName" => $row['name'],
             "companyDescription" => $row['description'],
             "count" => $row['quantity'],
-            "averagePrice" => $row['average_price']
+            "averagePrice" => $row['average_price'],
+            "currentPrice" => $row['current_price']
         ];
-        // Add to stock balance (total value of stocks owned)
-        $stockBalance += $row['quantity'] * $row['average_price'];
+
+        // Add to stock balance (total value of stocks owned based on current price)
+        $stockBalance += $row['quantity'] * $row['current_price'];
     }
 
     $stmt->close();
-    $conn->close();
 
-    // Step 4: Return response
+    // Calculate the total balance
+    $totalBalance = $cashBalance + $stockBalance;
+
+    // Step 4: Update the total_balance in the database
+    $stmt = $conn->prepare("UPDATE Accounts SET total_balance = ? WHERE account_id = ?");
+    $stmt->bind_param("di", $totalBalance, $accountId);
+    $stmt->execute();
+    $stmt->close();
+
+    // Step 5: Return response
     return buildResponse("GET_ACCOUNT_INFO_RESPONSE", "SUCCESS", [
-        "data" => ["user" => [
-            "userStocks" => $userStocks,
-            "userBalance" => [
-                "cashBalance" => $cashBalance,
-                "stockBalance" => $stockBalance,
-                "totalBalance" => $totalBalance
+        "message" => "Account Info Retrieval Success",
+        "data" => [
+            "user" => [
+                "userStocks" => $userStocks,
+                "userBalance" => [
+                    "cashBalance" => $cashBalance,
+                    "stockBalance" => $stockBalance,
+                    "totalBalance" => $totalBalance
+                ]
             ]
-        ]]
+        ]
     ]);
 }
 
@@ -314,33 +408,33 @@ function doGetStockInfo($sessionId, $payload)
         WHERE ticker LIKE ?
         LIMIT 7
         ";
-        
+
         $stmt = $conn->prepare($query);
         if (!$stmt) {
             return buildResponse("GET_STOCK_INFO_RESPONSE", "FAILED", ["error" => "Database error"]);
         }
-        
+
         $searchPattern = $ticker . "%";
         $stmt->bind_param("s", $searchPattern);
     } else {
         if (!is_numeric($marketCapMin) || !is_numeric($marketCapMax)) {
             return buildResponse("GET_STOCK_INFO_RESPONSE", "FAILED", ["error" => "Invalid market cap range"]);
         }
-        
+
         $query = "
         SELECT ticker, name, marketCap, sector, industry, price, exchange 
         FROM Stocks 
         WHERE marketCap >= ? AND marketCap <= ? LIMIT 7
         ";
-        
+
         $stmt = $conn->prepare($query);
         if (!$stmt) {
             return buildResponse("GET_STOCK_INFO_RESPONSE", "FAILED", ["error" => "Database error"]);
         }
-        
+
         $stmt->bind_param("dd", $marketCapMin, $marketCapMax);
     }
-    
+
     $stmt->execute();
     $stmt->bind_result($foundTicker, $name, $marketCap, $sector, $industry, $price, $exchange);
 
@@ -357,12 +451,12 @@ function doGetStockInfo($sessionId, $payload)
             "exchange" => $exchange
         ];
     }
-    
+
     $stmt->close();
     $conn->close();
 
-   
-    return buildResponse("GET_STOCK_INFO_RESPONSE", "SUCCESS", ["data" => $stocks]);
+
+    return buildResponse("GET_STOCK_INFO_RESPONSE", "SUCCESS", ["data" => $stocks, "message"=>"Stock Info retreival success."]);
 }
 
 
@@ -371,13 +465,14 @@ function GetStocksBasedOnRisk($sessionId)
     if ($userID = getUserIDfromSession($sessionId) === null) {
         return buildResponse("GET_STOCKS_BASED_ON_RISK_RESPONSE", "FAILED", ["error" => "Invalid session"]);
     }
-    
-    return buildResponse("GET_STOCKS_BASED_ON_RISK_RESPONSE", "SUCCESS", ["stocks" => ["AAPL", "GOOGL", "AMZN", "TSLA", "MSFT"]]);
+
+    return buildResponse("GET_STOCKS_BASED_ON_RISK_RESPONSE", "SUCCESS", ["stocks" => ["AAPL", "GOOGL", "AMZN", "TSLA", "MSFT"], "message"=>"Stock Risk data retreival success."]);
 }
 
 
 
-function getUserIDfromSession($sessionId) {
+function getUserIDfromSession($sessionId)
+{
     $conn = dbConnect();
     $stmt = $conn->prepare("SELECT user_id FROM Sessions WHERE session_id = ? AND expires_at > ?");
     $currentTime = time();
@@ -388,7 +483,7 @@ function getUserIDfromSession($sessionId) {
     if ($stmt->num_rows === 0) {
         $stmt->close();
         $conn->close();
-        return null;  
+        return null;
     }
 
     $stmt->bind_result($userId);
@@ -400,7 +495,8 @@ function getUserIDfromSession($sessionId) {
 
 
 
-function updateTotalBalance($db, $accountId) {
+function updateTotalBalance($db, $accountId)
+{
     $buyingPower = 0.0;
     $portfolioValue = 0.0;
     // Get Buying Power
@@ -440,7 +536,8 @@ function updateTotalBalance($db, $accountId) {
 }
 
 
-function performTransaction($sessionId, $ticker, $quantity, $price, $transactionType) {
+function performTransaction($sessionId, $ticker, $quantity, $price, $transactionType)
+{
     if (($userId = getUserIDfromSession($sessionId)) === null) {
         return buildResponse("PERFORM_TRANSACTION_RESPONSE", "FAILED", ["message" => "Invalid or expired session."]);
     }
@@ -489,8 +586,7 @@ function performTransaction($sessionId, $ticker, $quantity, $price, $transaction
             $stmt->bind_param("isid", $accountId, $ticker, $quantity, $price);
             $stmt->execute();
             $stmt->close();
-        } 
-        elseif ($transactionType === 'SELL') {
+        } elseif ($transactionType === 'SELL') {
             // Check Portfolio Holdings
             $stmt = $db->prepare("SELECT quantity FROM Portfolios WHERE account_id = ? AND ticker = ?");
             $stmt->bind_param("is", $accountId, $ticker);
@@ -556,7 +652,8 @@ function performTransaction($sessionId, $ticker, $quantity, $price, $transaction
 }
 
 
-function fetchSpecificStockData($sessionId, $ticker, $startTime, $endTime) {
+function fetchSpecificStockData($sessionId, $ticker, $startTime, $endTime)
+{
     // Validate session
     if (($userId = getUserIDfromSession($sessionId)) === null) {
         return buildResponse("FETCH_SPECIFIC_STOCK_DATA_RESPONSE", "FAILED", ["message" => "Invalid or expired session."]);
@@ -614,7 +711,7 @@ function fetchSpecificStockData($sessionId, $ticker, $startTime, $endTime) {
     $client = getClientForDMZ();
     $formattedStartTime = date("Y-m-d", $startTime);
     $formattedEndTime = date("Y-m-d", $endTime);
-    
+
     $request = buildRequest("FETCH_SPECIFIC_STOCK_DATA", ["ticker" => $ticker, "startTime" => $formattedStartTime, "endTime" => $formattedEndTime]);
     $response = $client->send_request($request);
 
@@ -657,7 +754,8 @@ function fetchSpecificStockData($sessionId, $ticker, $startTime, $endTime) {
 }
 
 
-function insertDataInBackground($filePath) {
+function insertDataInBackground($filePath)
+{
     // Use exec() to run the insertion process in the background
     exec("php dbAsyncInsertion.php $filePath > /dev/null 2>&1 &");
 }
