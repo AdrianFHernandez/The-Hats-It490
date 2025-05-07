@@ -173,7 +173,7 @@ function delayed_latest_price($ticker) {
 
 function getRecommendedStocks($riskLevel) {
     $baseUrl = "https://financialmodelingprep.com/api/v3/stock-screener";
-    $apiKey = "";
+    $apiKey = trim(file_get_contents("FMTAPIKEY"));
     // Configure query parameters based on risk level
     switch ($riskLevel) {
         case 1:
@@ -251,16 +251,21 @@ function getRecommendedStocks($riskLevel) {
 }
 
 function getChatbotAnswer($question) {
-    $api = ''; // Your actual API key
+    $apiKey = 'AIzaSyBLFwBnV4d2fCaY_nGquyAPoHeLnL5tE4o'; // Your actual API key
     $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' . $apiKey;
 
     // AIzaSyBLFwBnV4d2fCaY_nGquyAPoHeLnL5tE4o
     // to the question add "less than 100 words" to get a concise answer
-
+    $systemPrompt = "Answer like a financial advisor." .
+        "You are a \"investzero\" financial advisor with 10 years of experience. " .
+        "You are very good at answering questions about stocks and finance. " .
+        "Answer the question in less than 30 words. " .
+        "Be concise and to the point. Never discuss about yourself, anything else, but stocks. IMP (no markup please) " ;
     $postData = json_encode([
         "contents" => [
             [
                 "parts" => [
+                    ["text" => $systemPrompt],
                     ["text" => $question]
                 ]
             ]
@@ -301,6 +306,7 @@ function getChatbotAnswer($question) {
                 }
             }
         }
+        // echo "Answer: " . $answerText . "\n";
         return buildResponse("GET_CHATBOT_ANSWER_RESPONSE", "SUCCESS", [
             "answer" => $answerText,
             "citations" => $citations,
@@ -342,7 +348,7 @@ function getNews($query = 'stock market') {
 
     $articles = [];
     foreach ($responseData['articles'] as $index => $article) {
-        if ($index >= 5) break; // Limit to 5 articles
+        if ($index >= 15) break; // Limit to 15 articles
         $articles[] = [
             "title" => $article['title'] ?? '',
             "description" => $article['description'] ?? '',
@@ -365,4 +371,7 @@ function getNews($query = 'stock market') {
 // $data = fetch_specific_stock_chart_data('VOO', strtotime('2025-02-01'), strtotime('2025-02-14'));
 // dump into a file json
 // file_put_contents('stock_data.json', json_encode($data, JSON_PRETTY_PRINT));
+
+
+
 ?>

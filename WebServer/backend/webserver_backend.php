@@ -432,11 +432,12 @@ function handleGetChatbotAnswer($data){
     }
 }
 
-function handleGetNews(){
-
+function handleGetNews($data){
+    $query = $data['query'] ?? 'stock_market';
     $client = get_client();
     $request = buildRequest('GET_NEWS', [
         'sessionId' => $_COOKIE['PHPSESSID'],
+        'query' => $query
     ]);
     //
     $response = $client->send_request($request);
@@ -469,7 +470,7 @@ switch ($data['type']) {
         handleGetChatbotAnswer($data);
         break;
     case "GET_NEWS":
-        handleGetNews();
+        handleGetNews($data);
         break;
     default:
         logExternally("ERROR", "Frontend: Unknown request type: " . $data['type']);
