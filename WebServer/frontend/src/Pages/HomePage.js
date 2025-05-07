@@ -62,6 +62,14 @@ function HomePage({ user, handleLogout }) {
       <div className="row justify-content-center">
         <div className="col-12 col-md-10">
  
+        <button
+          className="btn btn-primary my-3"
+          onClick={() => {
+            window.open(`${getBackendURL()}download_transactions.php`, "_blank");
+          }}
+        >
+          
+        </button>
 
           
           {user ? (
