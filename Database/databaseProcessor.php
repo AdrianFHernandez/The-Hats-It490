@@ -78,6 +78,15 @@ function requestProcessor($request)
                 clearExpiredSessions();
             }
             break;
+        case "GET_RECOMMENDED_STOCKS":
+            $response =  getRecommendedStocks($request["payload"]['sessionId'], $request["payload"]['riskLevel']);
+            break;
+            case "GET_CHATBOT_ANSWER":
+            $response =  getChatbotAnswer($request["payload"]['sessionId'], $request["payload"]['question']);
+            break;
+        case "GET_NEWS":
+            $response =  getNews($request["payload"]['sessionId'], $request["payload"]['query']);
+            break;
         default:
             $response = buildResponse("ERROR", "FAILED", ["message" => "Unknown request type: " . $request['type']]);
             break;

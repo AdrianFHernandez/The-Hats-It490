@@ -796,13 +796,13 @@ function getChatbotAnswer($sessionId, $question) {
     return buildResponse("GET_CHATBOT_ANSWER_RESPONSE", "FAILED", ["message" => "No answer found."]);
 }
 
-function getNews($sessionId){
+function getNews($sessionId, $query){
     if (($userId = getUserIDfromSession($sessionId)) === null) {
         return buildResponse("GET_NEWS_RESPONSE", "FAILED", ["message" => "Invalid or expired session."]);
     }
 
     $client = getClientForDMZ();
-    $request = buildRequest("GET_NEWS");
+    $request = buildRequest("GET_NEWS", ["query" => $query]);
     $response = $client->send_request($request);
 
     if ($response && $response["status"] === "SUCCESS") {
