@@ -60,7 +60,7 @@ function requestProcessor($request) {
                 $response = getChatbotAnswer($request['payload']['question']);
                 break;
             case "GET_NEWS":
-                $response = getNews();
+                $response = getNews($request['payload']['query']);
                 break;
           case "SEND_OTP_CODE":
               $response = sendOTP($request['payload']["phoneNumber"], $request['payload']["otpCode"]);
