@@ -452,6 +452,39 @@ function handleGetNews($data){
     }
 }
 
+function handleGet1099K() {
+    if (!isset($_COOKIE['PHPSESSID'])) {
+        logExternally("ERROR", "Frontend: 1099-K fetch failed - cookie not set");
+        echo json_encode(["error" => "Session cookie not set"]);
+        exit();
+    }
+
+    $sessionId = $_COOKIE['PHPSESSID'];
+
+    
+    $client = get_client();
+    $request = buildRequest('GET_TAX_1099K', ['sessionId' => $sessionId]);
+
+    $response = $client->send_request($request);
+
+    // Expecting: user: { name, email, phone }, transactions: [{ date, ticker, type, quantity, price }]
+    if (
+        $response &&
+        $response["status"] === "SUCCESS" &&
+        $response["type"] === "GET_TAX_1099K_RESPONSE"
+    ) {
+        logExternally("LOG", "Frontend: Successfully retrieved 1099-K data");
+        echo json_encode([
+            "user" => $response["payload"]["user"],
+            "transactions" => $response["payload"]["transactions"]
+        ]);
+    } else {
+        logExternally("ERROR", "Frontend: Failed to retrieve 1099-K data via broker");
+        echo json_encode(["error" => "Failed to fetch tax data"]);
+    }
+}
+
+
 
 switch ($data['type']) {
     case 'REGISTER': handleRegister($data); break;
@@ -472,10 +505,12 @@ switch ($data['type']) {
     case "GET_NEWS":
         handleGetNews($data);
         break;
+    case 'GET_TAX_1099K':
+        handleGet1099K();
+        break;
     default:
         logExternally("ERROR", "Frontend: Unknown request type: " . $data['type']);
         echo json_encode(["error" => "Unknown request type"]);
         break;
 }
 ?>
-

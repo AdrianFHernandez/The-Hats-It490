@@ -37,6 +37,9 @@ const Navbar = ({ handleLogout }) => {
         <li className="nav-item">
           <Link className="nav-link" to="/news">News</Link>
         </li>
+        <li className="nav-item">
+          <Link className="nav-link" to="/taxDocument">Tax Document</Link>
+        </li>
       </ul>
       <button onClick={handleLogout} className="btn btn-danger">Logout</button>
     </div>

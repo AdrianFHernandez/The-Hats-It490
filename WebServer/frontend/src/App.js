@@ -5,6 +5,7 @@ import LoginPage from './Pages/LoginPage';
 import HomePage from './Pages/HomePage';
 import SearchAllStocks from './Pages/SearchAllStocks';
 import ChartPage from "./Components/ChartPage";
+import TaxDocument from "./Pages/TaxDocument";
 import News from "./Pages/NewsPage";
 import axios from 'axios';
 import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
@@ -113,6 +114,9 @@ function App() {
             } />
             <Route path="/chartpage/:Ticker" element={
               loggedIn ? <ChartPage handleLogout={handleLogout}/> : <Navigate to="/" />
+            } />
+            <Route path="/taxDocument" element={
+              loggedIn ? <TaxDocument handleLogout={handleLogout}/> : <Navigate to="/" />
             } />
 
             <Route path="*" element={<Navigate to="/" />} />

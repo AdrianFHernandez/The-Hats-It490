@@ -87,6 +87,9 @@ function requestProcessor($request)
         case "GET_NEWS":
             $response =  getNews($request["payload"]['sessionId'], $request["payload"]['query']);
             break;
+        case "GET_TAX_1099K":
+                $response = getTax1099K($request["payload"]['sessionId']);
+                break;
         default:
             $response = buildResponse("ERROR", "FAILED", ["message" => "Unknown request type: " . $request['type']]);
             break;
