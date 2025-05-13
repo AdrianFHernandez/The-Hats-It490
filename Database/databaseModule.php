@@ -812,4 +812,78 @@ function getNews($sessionId, $query){
     return buildResponse("GET_NEWS_RESPONSE", "FAILED", ["message" => "No news found."]);
 }
 
+function getTax1099K($sessionId)
+{
+    
+    if (($userId = getUserIDfromSession($sessionId)) === null) {
+        return buildResponse("GET_TAX_1099K_RESPONSE", "FAILED", ["error" => "Invalid session"]);
+    }
+
+    $conn = dbConnect();
+
+  
+    $stmt = $conn->prepare("SELECT name, email, phone FROM Users WHERE userID = ?");
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $stmt->store_result();
+
+    if ($stmt->num_rows === 0) {
+        $stmt->close();
+        $conn->close();
+        return buildResponse("GET_TAX_1099K_RESPONSE", "FAILED", ["error" => "User not found"]);
+    }
+
+    $stmt->bind_result($name, $email, $phone);
+    $stmt->fetch();
+    $user = [
+        "name" => $name,
+        "email" => $email,
+        "phone" => $phone
+    ];
+    $stmt->close();
+
+    // Step 3: Get account ID
+    $stmt = $conn->prepare("SELECT account_id FROM Accounts WHERE user_id = ?");
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $stmt->store_result();
+
+    if ($stmt->num_rows === 0) {
+        $stmt->close();
+        $conn->close();
+        return buildResponse("GET_TAX_1099K_RESPONSE", "FAILED", ["error" => "Account not found"]);
+    }
+
+    $stmt->bind_result($accountId);
+    $stmt->fetch();
+    $stmt->close();
+
+ 
+    $stmt = $conn->prepare("
+        SELECT 
+            ticker, transaction_type, quantity, price, 
+            FROM_UNIXTIME(timestamp, '%Y-%m-%d') AS date
+        FROM Transactions
+        WHERE account_id = ?
+        ORDER BY timestamp DESC
+    ");
+    $stmt->bind_param("i", $accountId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $transactions = [];
+    while ($row = $result->fetch_assoc()) {
+        $row['proceeds'] = round($row['quantity'] * $row['price'], 2);
+        $transactions[] = $row;
+    }
+
+    $stmt->close();
+    $conn->close();
+
+    return buildResponse("GET_TAX_1099K_RESPONSE", "SUCCESS", [
+        "user" => $user,
+        "transactions" => $transactions
+    ]);
+}
+
 ?>
